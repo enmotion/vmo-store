@@ -1,0 +1,40 @@
+{
+  "name": "vmo-store",
+  "version": "0.0.0-beta.0",
+  "type": "module",
+  "private": true,
+  "description": "storage proxy",
+  "main": "./dist/vmo-store.umd.cjs",
+  "module": "./dist/vmo-store.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/vmo-store.js",
+      "require": "./dist/vmo-store.umd.cjs"
+    },
+    "./*": "./*"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build",
+    "preview": "vite preview"
+  },
+  "peerDependencies": {
+    "vue": "^3.3.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.4",
+    "@vitejs/plugin-vue": "^4.5.0",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.3.6",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.0",
+    "vite-plugin-dts": "^3.6.4",
+    "vue-tsc": "^1.8.22"
+  }
+}
