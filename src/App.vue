@@ -2,6 +2,8 @@
 import { VmoStore } from '../index'
 const ms = new VmoStore({
   cryptoKey: 'adfaffdfa',
+  namespace: 'mod',
+  prefix: 'sss',
   dataProps: {
     name: {
       type: [String, Number, Object, Array, Boolean, Date, Function],
@@ -16,10 +18,10 @@ const ms = new VmoStore({
     }
   }
 })
-ms.$store.name = 12
-ms.$store.age = { a: 12 }
+ms.setItem('name', 'enmotion')
+ms.setItem('age', 12)
 setTimeout(() => {
-  ms.$store.name = ['22']
+  ms.setItem('age', [12])
 }, 1000)
 // ms.$store.a.b = 'aa'
 console.log(ms.$store.age)

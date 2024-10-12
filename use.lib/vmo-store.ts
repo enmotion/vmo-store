@@ -29,62 +29,6 @@ export class VmoStore {
     this._data = JSON.parse(localStorage.getItem(this._namespace) ?? '{}') ?? {} // 缓存代理数据
     this.$store = this._createProxy(this._data) // 创建缓存数据代理
   }
-  public getItem(prop: string) {
-    const T = this
-    try {
-      /* 键名对应的 缓存数据 元信息描述 是否存在  */
-      if (Object.keys(T._props).includes(prop)) {
-        // 存在:尝试取值
-        const data = Reflect.get(T._data, prop)
-        let value: any = null
-        // 获取属性的类型
-        const types = T._props[prop].type.constructor == Array ? T._props[prop].type : [T._props[prop].type]
-        // 获取属性值，必须满足 0:未设置过期时间||未过期 返回 缓存值 或 默认值
-        if (!T._props[prop]?.expireTime || Date.now() < T._isExpired(prop, T._props[prop]?.expireTime)) {
-          value = data?.v?.[0]
-        } else {
-          value = T._getDefaultValue(T._props[prop]?.default)
-          // 发现默认值情况，不论是否存在该数据，都应该清理本地缓存 可以进一步优化
-          if (!!data) {
-            delete T._data[prop]
-            localStorage.setItem(T._namespace, JSON.stringify(T._data)) // 将数据缓存入持久化
-          }
-        }
-        // 返回值，必须 0:类型匹配 否则返回 undefined
-        return types.includes(value?.constructor) ? value : undefined
-      } else {
-        // 不存在:直接返回 undefined
-        return undefined
-      }
-    } catch (err) {
-      console.error(err)
-    }
-  }
-  public setItem(prop: string, value: any) {
-    const T = this
-    try {
-      /* 键名对应的 缓存数据 元信息描述 是否存在  */
-      if (Object.keys(T._props).includes(prop)) {
-        const types = T._props[prop].type.constructor == Array ? T._props[prop].type : [T._props[prop].type]
-        if (types.includes(value.constructor)) {
-          const data = { v: [value], t: Date.now() } // 更新数据
-          Reflect.set(T._data, prop, data) // 将数据更新到热数据
-          localStorage.setItem(T._namespace, JSON.stringify(T._data)) // 将数据缓存入持久化
-          return true
-        } else {
-          throw new Error(
-            `Property [${prop}] expects a type of [${types.map(
-              constructor => (constructor as any)?.name
-            )}], but the actual obtained type is ${value.constructor?.name}.`
-          )
-        }
-      } else {
-        throw new Error('当前附值，并未声明')
-      }
-    } catch (err) {
-      throw err
-    }
-  }
   /**
    * _createProxy:Function 创建代理
    * @param target // 代理目标
@@ -94,60 +38,58 @@ export class VmoStore {
     const T = this // 固定指针
     const proxyHandler: ProxyHandler<Record<string, any>> = {
       get: function (target, prop: string /* receiver */) {
-        return T.getItem(prop)
-        // try {
-        //   /* 键名对应的 缓存数据 元信息描述 是否存在  */
-        //   if (Object.keys(T._props).includes(prop)) {
-        //     // 存在:尝试取值
-        //     const data = Reflect.get(target, prop)
-        //     let value: any = null
-        //     // 获取属性的类型
-        //     const types = T._props[prop].type.constructor == Array ? T._props[prop].type : [T._props[prop].type]
-        //     // 获取属性值，必须满足 0:未设置过期时间||未过期 返回 缓存值 或 默认值
-        //     if (!T._props[prop]?.expireTime || Date.now() < T._isExpired(prop, T._props[prop]?.expireTime)) {
-        //       value = data?.v?.[0]
-        //     } else {
-        //       value = T._getDefaultValue(T._props[prop]?.default)
-        //       // 发现默认值情况，不论是否存在该数据，都应该清理本地缓存 可以进一步优化
-        //       if (!!data) {
-        //         delete target[prop]
-        //         localStorage.setItem(T._namespace, JSON.stringify(target)) // 将数据缓存入持久化
-        //       }
-        //     }
-        //     // 返回值，必须 0:类型匹配 否则返回 undefined
-        //     return types.includes(value?.constructor) ? value : undefined
-        //   } else {
-        //     // 不存在:直接返回 undefined
-        //     return undefined
-        //   }
-        // } catch (err) {
-        //   console.error(err)
-        // }
+        try {
+          /* 键名对应的 缓存数据 元信息描述 是否存在  */
+          if (Object.keys(T._props).includes(prop)) {
+            // 存在:尝试取值
+            const data = Reflect.get(target, prop)
+            let value: any = null
+            // 获取属性的类型
+            const types = T._props[prop].type.constructor == Array ? T._props[prop].type : [T._props[prop].type]
+            // 获取属性值，必须满足 0:未设置过期时间||未过期 返回 缓存值 或 默认值
+            if (!T._props[prop]?.expireTime || Date.now() < T._isExpired(prop, T._props[prop]?.expireTime)) {
+              value = data?.v?.[0]
+            } else {
+              value = T._getDefaultValue(T._props[prop]?.default)
+              // 发现默认值情况，不论是否存在该数据，都应该清理本地缓存 可以进一步优化
+              if (!!data) {
+                delete target[prop]
+                localStorage.setItem(T._namespace, JSON.stringify(target)) // 将数据缓存入持久化
+              }
+            }
+            // 返回值，必须 0:类型匹配 否则返回 undefined
+            return types.includes(value?.constructor) ? value : undefined
+          } else {
+            // 不存在:直接返回 undefined
+            return undefined
+          }
+        } catch (err) {
+          console.error(err)
+        }
       },
       set: function (target, prop: string, value, receiver) {
-        return T.setItem(prop, value)
-        // try {
-        //   /* 键名对应的 缓存数据 元信息描述 是否存在  */
-        //   if (Object.keys(T._props).includes(prop)) {
-        //     const types = T._props[prop].type.constructor == Array ? T._props[prop].type : [T._props[prop].type]
-        //     if (types.includes(value.constructor)) {
-        //       const data = { v: [value], t: Date.now() } // 更新数据
-        //       Reflect.set(target, prop, data, receiver) // 将数据更新到热数据
-        //       localStorage.setItem(T._namespace, JSON.stringify(target)) // 将数据缓存入持久化
-        //       return true
-        //     } else {
-        //       throw new Error(
-        //         `Property [${prop}] expects a type of [${types.map(
-        //           constructor => (constructor as any)?.name
-        //         )}], but the actual obtained type is ${value.constructor?.name}.`
-        //       )
-        //     }
-        //   } else {
-        //     throw new Error('当前附值，并未声明')
-        //   }
-        // } catch (err) {
-        //   throw err
-        // }
+        try {
+          /* 键名对应的 缓存数据 元信息描述 是否存在  */
+          if (Object.keys(T._props).includes(prop)) {
+            const types = T._props[prop].type.constructor == Array ? T._props[prop].type : [T._props[prop].type]
+            if (types.includes(value.constructor)) {
+              const data = { v: [value], t: Date.now() } // 更新数据
+              Reflect.set(target, prop, data, receiver) // 将数据更新到热数据
+              localStorage.setItem(T._namespace, JSON.stringify(target)) // 将数据缓存入持久化
+              return true
+            } else {
+              throw new Error(
+                `Property [${prop}] expects a type of [${types.map(
+                  constructor => (constructor as any)?.name
+                )}], but the actual obtained type is ${value.constructor?.name}.`
+              )
+            }
+          } else {
+            throw new Error('当前附值，并未声明')
+          }
+        } catch (err) {
+          throw err
+        }
       }
     }
     const proxy = new Proxy(target, proxyHandler)
@@ -197,6 +139,12 @@ export class VmoStore {
         }
   ) {
     return value.constructor == Function ? (value as () => any)() : value
+  }
+  public getItem(prop: string) {
+    return this.$store[prop]
+  }
+  public setItem(prop: string, value: any) {
+    return (this.$store[prop] = value)
   }
   public getProps() {
     return this._props
