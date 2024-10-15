@@ -1,8 +1,15 @@
 <script setup lang="ts">
 import { VmoStore } from '../index'
+import { enCrypto, deCrypto } from '@lib/crypto-key'
+
+const cryptoData = enCrypto('enmotion-m2', 'kesa')
+console.error('Encrypted Data (Base64):', cryptoData)
+console.error('Decrypted Data (with random chars):', deCrypto(cryptoData, 'kesa'))
+
 const ms = new VmoStore({
-  cryptoKey: 'adfaffdfa',
+  cryptoKey: 'op',
   namespace: 'mod',
+  version: 0,
   prefix: 'sss',
   dataProps: {
     name: {
@@ -10,43 +17,30 @@ const ms = new VmoStore({
       default: 'mod',
       storge: 'sessionStorge'
     },
+    user: {
+      type: [Array, Object],
+      default: () => [1233],
+      // expireTime: '2s',
+      storge: 'localStorage'
+    },
     age: {
       type: [String, Number, Array, Function, Object],
-      default: () => [],
+      default: () => ['age'],
       expireTime: '3.5s',
-      storge: 'localStorge'
+      storge: 'localStorage'
     }
   }
 })
-ms.setItem('name', 'enmotion')
-ms.setItem('age', 12)
+ms.setItem('user', { name: 'mod', id: 'ID:12213' })
+ms.$store.age = 12
+ms.$store.name = 'enmotion'
+console.log(ms.getItem('user'))
 setTimeout(() => {
-  ms.setItem('age', [12])
+  console.log(ms.getItem('user'))
 }, 1000)
-// ms.$store.a.b = 'aa'
-console.log(ms.$store.age)
 setTimeout(() => {
-  console.log(ms.$store.age)
+  console.log(ms.getItem('user'))
 }, 3000)
-setTimeout(() => {
-  console.log(ms.$store.age)
-}, 5000)
-// console.log(ms.$data.a.b.c.d)
-// ms.$data.ss = { name: 'kdo' }
-// ms.$data.a = 12
-// ms.$data.c = {
-//   name: {
-//     age: 12
-//   }
-// }
-// const bytes = new TextEncoder().encode('徐看看')
-// console.log(bytes.byteLength)
-
-// // console.log(ms.$data.a)
-// // console.log(ms.$data.c.name.age)
-// ms.$data.d = 12
-// ms.$data.c.name.ok = 'ok'
-// console.log(null ?? true)
 </script>
 
 <template>
