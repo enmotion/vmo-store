@@ -2,7 +2,7 @@
  * @Author: enmotion
  * @Date: 2024-09-13 02:15:16
  * @Last Modified by: enmotion
- * @Last Modified time: 2024-10-16 19:29:37
+ * @Last Modified time: 2024-10-16 19:55:47
  */
 // import { ref, watch } from 'vue'
 import type { DataProps, BasicType, StoreParams, ExpireTime, StorageMethodProxy, CacheData, Capacity } from '@type'
@@ -19,7 +19,7 @@ export class VmoStore {
   private _props: DataProps // 缓存数据 元信息描述
   private _data: CacheData // 热数据 v:数组格式保存的数据,t:存储时间, k:是否要经过 eval 转化
   private _storage: StorageMethodProxy
-  // private _capacity: Capacity
+  private _capacity: Capacity
   public $store: Record<string, any>
   /**
    * constructor:Function 构造函数
@@ -34,6 +34,7 @@ export class VmoStore {
     this._storage = config.storage ?? defaultStorageMethodProxy
     this._data = this._getCache() // 缓存代理数据
     this.$store = this._createProxy(this._data) // 创建缓存数据代理
+    this._capacity = config.capacity ?? {}
     config.cacheInitCleanupMode && this.clearUnusedCache(config.cacheInitCleanupMode)
     this._setCache('localStorage')
     this._setCache('sessionStorage')
@@ -78,11 +79,12 @@ export class VmoStore {
     const T = this
     const keys = Object.keys(T._props).filter(key => T._props[key].storge == type)
     const store = T._pick(keys, T._data)
-    T._storage.setItem(
-      T._namespace,
-      !T._cryptoKey ? JSON.stringify(store) : enCrypto(JSON.stringify(store), T._cryptoKey),
-      type
-    ) // 将数据缓存入持久化
+    const dataString = !T._cryptoKey ? JSON.stringify(store) : enCrypto(JSON.stringify(store), T._cryptoKey)
+    if (!T._capacity?.[type] || T._capacity?.[type] * 1024 >= new Blob([dataString]).size) {
+      T._storage.setItem(T._namespace, dataString, type) // 将数据缓存入持久化
+    } else {
+      throw new Error('存储空间不够')
+    }
   }
   /**
    * _createProxy:Function 创建代理

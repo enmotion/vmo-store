@@ -21,8 +21,8 @@ export type StorageMethodProxy = {
   getKeys: { (type?: 'localStorage' | 'sessionStorage'): string[] }
 }
 export type Capacity = {
-  local?: number
-  session?: number
+  localStorage?: number
+  sessionStorage?: number
 }
 export type ExpireTime =
   | number

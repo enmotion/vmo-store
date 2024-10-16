@@ -49,20 +49,20 @@ export const defaultStorageMethodProxy: StorageMethodProxy = {
   }
 }
 
-export const defaultCookieMethodProxy: StorageMethodProxy = {
-  setItem: (key, value, type) => {
-    return false
-  },
-  getItem: (key, type) => {
-    return key
-  },
-  removeItem: (key, type) => {
-    return false
-  },
-  clear: type => {
-    return false
-  },
-  getKeys: type => {
-    return []
-  }
-}
+// export const defaultCookieMethodProxy: StorageMethodProxy = {
+//   setItem: (key, value, type) => {
+//     return false
+//   },
+//   getItem: (key, type) => {
+//     return key
+//   },
+//   removeItem: (key, type) => {
+//     return false
+//   },
+//   clear: type => {
+//     return false
+//   },
+//   getKeys: type => {
+//     return []
+//   }
+// }
