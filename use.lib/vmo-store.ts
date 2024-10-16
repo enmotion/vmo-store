@@ -2,7 +2,7 @@
  * @Author: enmotion
  * @Date: 2024-09-13 02:15:16
  * @Last Modified by: enmotion
- * @Last Modified time: 2024-10-16 20:35:02
+ * @Last Modified time: 2024-10-16 20:38:32
  */
 // import { ref, watch } from 'vue'
 import type { DataProps, BasicType, StoreParams, ExpireTime, StorageMethodProxy, CacheData, Capacity } from '@type'
@@ -89,7 +89,7 @@ export class VmoStore {
     const keys = Object.keys(T._props).filter(key => T._props[key].storge == type)
     const store = T._pick(keys, T._data)
     const dataString = !T._cryptoKey ? JSON.stringify(store) : enCrypto(JSON.stringify(store), T._cryptoKey)
-    if (!T._capacity?.[type] || T._capacity?.[type] >= new Blob([dataString]).size) {
+    if (!T._capacity?.[type] || (T._capacity[type] as number) >= new Blob([dataString]).size) {
       console.log(type, T._capacity?.[type], new Blob([dataString]).size, dataString)
       T._storage.setItem(T._namespace, dataString, type) // 将数据缓存入持久化
     } else {
@@ -98,7 +98,7 @@ export class VmoStore {
         `The storage capacity of memory [${type}] overflows, with a limit of [${
           T._capacity?.[type]
         } byte], and a storage capacity of [${new Blob([dataString]).size} byte], resulting in an overflow of [${
-          new Blob([dataString]).size - T._capacity?.[type]
+          new Blob([dataString]).size - (T._capacity[type] as number)
         } byte].`
       )
     }
