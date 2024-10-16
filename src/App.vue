@@ -1,48 +1,45 @@
 <script setup lang="ts">
 import { VmoStore } from '../index'
-// import { enCrypto, deCrypto } from '@lib/crypto-key'
 
-// const cryptoData = enCrypto('enmotion-m2', 'kesa')
-// console.error('Encrypted Data (Base64):', cryptoData)
-// console.error('Decrypted Data (with random chars):', deCrypto(cryptoData, 'kesa'))
-
-const ms = new VmoStore({
-  cryptoKey: '1231skfasfjlaflsadf131kjlkjasfj',
-  namespace: 'enmo',
-  version: 1,
-  prefix: 'mods',
-  initClearUpMode: 'self',
+const cache = new VmoStore({
+  cryptoKey: 'mods', // 加密密钥
+  namespace: 'enmo', // 命名空间
+  version: 1, // 存储版本
+  prefix: 'mods', // 前置名称
+  cacheInitCleanupMode: 'self', // 缓存清理模式
   dataProps: {
-    name: {
-      type: [String, Number, Object, Array, Boolean, Date, Function],
-      default: () => (a: number, b: number) => a + b,
+    pluss: {
+      type: [Function], // 类型约束
+      default: () => (a: number, b: number) => a + b, // 默认值，类 vue props
       // expireTime: '2s',
-      storge: 'sessionStorage'
+      storge: 'localStorage' // 指定存储器
     },
     user: {
-      type: [Array, Object],
+      type: Array,
       default: () => [1233],
-      // expireTime: '2s',
+      // expireTime: '2m',
       storge: 'sessionStorage'
     },
     age: {
       type: [String, Number, Array, Function, Object],
       default: () => ['age'],
-      expireTime: '3.5s',
+      expireTime: '3.5s', // 过期时间
       storge: 'localStorage'
     }
   }
 })
-// ms.clearUnusedCache('all')
-ms.setData('user', { name: 'mod', id: 'ID:12213' })
-ms.$store.age = 12
-// ms.$store.name = function (a: number, b: number) {
-//   return a * b
-// }
-console.log(ms.$store)
-console.warn(ms.$store.name.constructor == Function ? ms.$store.name(4, 3) : ms.$store.name)
+
+console.log(cache.$store.user) // [1233]
+cache.$store.user = ['a']
+console.log(cache.$store.user) // [1233]
+// cache.removeData('user')
+console.log(cache.$store.user) // [1233]
+console.log(cache.$store.pluss(3, 3)) // 6
+cache.$store.pluss = (a: number, b: number) => a * b
+console.log(cache.$store.pluss(3, 3)) // 9
 setTimeout(() => {
-  console.warn(ms.$store.name.constructor == Function ? ms.$store.name(4, 3) : ms.$store.name)
+  // 过期后再次使用
+  console.log(cache.$store.pluss(3, 3)) // 6
 }, 3000)
 </script>
 

@@ -2,12 +2,13 @@
  * @Author: enmotion
  * @Date: 2024-09-13 02:15:16
  * @Last Modified by: enmotion
- * @Last Modified time: 2024-10-16 17:00:18
+ * @Last Modified time: 2024-10-16 19:29:37
  */
 // import { ref, watch } from 'vue'
-import type { DataProps, BasicType, StoreParams, ExpireTime, StorageProxyMethods, CacheData, Capacity } from '@type'
+import type { DataProps, BasicType, StoreParams, ExpireTime, StorageMethodProxy, CacheData, Capacity } from '@type'
 import { enCrypto, deCrypto } from './crypto-key'
 import { defaultStorageMethodProxy } from './default-storage'
+
 /**
  * VmoStore:Class
  * 本地缓存管理类
@@ -17,7 +18,7 @@ export class VmoStore {
   private _namespace: `${string}:${string}:${number}` // 命名空间
   private _props: DataProps // 缓存数据 元信息描述
   private _data: CacheData // 热数据 v:数组格式保存的数据,t:存储时间, k:是否要经过 eval 转化
-  private _storage: StorageProxyMethods
+  private _storage: StorageMethodProxy
   // private _capacity: Capacity
   public $store: Record<string, any>
   /**
@@ -32,10 +33,10 @@ export class VmoStore {
     this._props = config.dataProps // 数据属性描述
     this._storage = config.storage ?? defaultStorageMethodProxy
     this._data = this._getCache() // 缓存代理数据
-    // this._capacity = config.capacity ?? {}
-    // console.log(this._capacity)
     this.$store = this._createProxy(this._data) // 创建缓存数据代理
-    config.initClearUpMode && this.clearUnusedCache(config.initClearUpMode)
+    config.cacheInitCleanupMode && this.clearUnusedCache(config.cacheInitCleanupMode)
+    this._setCache('localStorage')
+    this._setCache('sessionStorage')
   }
   /**
    * 获取缓存呢数据
@@ -63,6 +64,7 @@ export class VmoStore {
           ) ?? {} // 获取 localStorage 中缓存的全部数据
       }
       const result: Record<string, { v: any[]; t: number; k?: boolean }> = {}
+      console.log(cache, 'cache')
       Object.keys(T._props).forEach(key => {
         result[key] = cache[T._props[key].storge][key]
       })
@@ -112,7 +114,6 @@ export class VmoStore {
             let value: any = data?.v
             // 获取属性的类型
             const types = T._getTypes(T._props[prop].type)
-            // console.log(prop, types, 'types')
             // 获取属性值，必须满足 0:未设置过期时间||未过期 返回 缓存值 或 默认值
             if (!T._props[prop]?.expireTime || Date.now() < T._isExpired(prop, T._props[prop].expireTime)) {
               value = data?.k ? eval('(' + data?.v + ')') : data?.v ?? T._getDefaultValue(T._props[prop]?.default)
@@ -152,7 +153,7 @@ export class VmoStore {
           /* 键名对应的 缓存数据 元信息描述 是否存在  */
           if (Object.keys(T._props).includes(prop)) {
             const types = T._getTypes(T._props[prop].type)
-            if (types.includes(value.constructor)) {
+            if (types.includes(value?.constructor)) {
               const data = {
                 v: value.constructor == Function ? value.toString() : value,
                 t: Date.now(),
@@ -165,7 +166,7 @@ export class VmoStore {
               throw new Error(
                 `Property [${prop}] expects a type of [${types.map(
                   constructor => (constructor as any)?.name
-                )}], but the actual obtained type is ${value.constructor?.name}.`
+                )}], but the actual obtained type is ${value?.constructor?.name}.`
               )
             }
           } else {
@@ -188,7 +189,6 @@ export class VmoStore {
   private _pick(keys: string[], data: Record<string, any>) {
     const result: Record<string, any> = {}
     keys.forEach(k => {
-      // console.warn(k, data, data[k])
       result[k] = data[k]
     })
     return result
@@ -249,7 +249,6 @@ export class VmoStore {
    * @returns
    */
   private _getTypes(type: BasicType | BasicType[]) {
-    // console.log('_getTypes', type.constructor)
     return type.constructor == Array ? type : [type]
   }
   /**
@@ -259,7 +258,6 @@ export class VmoStore {
   public clearUnusedCache(type: 'all' | 'self') {
     const T = this
     const itemKeys = T._storage.getKeys()
-    console.log('err')
     switch (type) {
       case 'all':
         itemKeys
@@ -277,7 +275,6 @@ export class VmoStore {
             return RegEx.test(key) && T._namespace !== key
           })
           .map(key => {
-            console.error('remove:', key)
             T._storage.removeItem(key, 'localStorage')
             T._storage.removeItem(key, 'sessionStorage')
           })
@@ -305,6 +302,20 @@ export class VmoStore {
   }
   public setData(prop: string, value: any) {
     return (this.$store[prop] = value)
+  }
+  public removeData(prop: string) {
+    const type = this._props[prop].storge
+    delete this._data[prop]
+    this._setCache(type)
+  }
+  public updateProp(props: DataProps) {
+    this._props = Object.assign(this._props, props)
+  }
+  public removeProp(prop: string) {
+    const type = this._props[prop].storge
+    delete this._data[prop]
+    delete this._props[prop]
+    this._setCache(type)
   }
   public getProps(key?: string) {
     return key ? this._props[key] : this._props

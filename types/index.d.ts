@@ -13,7 +13,7 @@ export type BasicType =
   | AsyncGenerator
 
 export type CacheData = Record<string, { v: any[]; t: number; k?: boolean }>
-export type StorageProxyMethods = {
+export type StorageMethodProxy = {
   setItem: { (key: string, value: any, type?: 'localStorage' | 'sessionStorage'): any }
   getItem: { (key: string, type?: 'localStorage' | 'sessionStorage'): string | null }
   removeItem: { (key: string, type?: 'localStorage' | 'sessionStorage'): any }
@@ -49,6 +49,6 @@ export type StoreParams = {
   cryptoKey?: string
   dataProps: DataProps
   capacity?: Capacity
-  storage?: StorageProxy
-  initClearUpMode?: 'all' | 'self'
+  storage?: StorageMethodProxy
+  cacheInitCleanupMode?: 'all' | 'self'
 }

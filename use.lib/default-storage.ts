@@ -1,9 +1,9 @@
-import type { StorageProxyMethods } from '@type'
+import type { StorageMethodProxy } from '@type'
 /**
- * 默认缓存代理,可以更改此处的方法，更换自己需要的缓存器
- *
+ * 默认缓存代理,可以更改此处的方法，更换自己需要的缓存器的核心, 增强此库在运用时的扩展性
+ * setItem:存储数据，getItem:获取数据，removeItem: 移除数据，clear:清理数据, getKeys: 获取全部的缓存数据键名
  */
-export const defaultStorageMethodProxy: StorageProxyMethods = {
+export const defaultStorageMethodProxy: StorageMethodProxy = {
   setItem: (key, value, type) => {
     const storage = type == 'localStorage' ? localStorage : sessionStorage
     return storage.setItem(key, value)
@@ -46,5 +46,23 @@ export const defaultStorageMethodProxy: StorageProxyMethods = {
       }
       return Array.from(new Set(keys))
     }
+  }
+}
+
+export const defaultCookieMethodProxy: StorageMethodProxy = {
+  setItem: (key, value, type) => {
+    return false
+  },
+  getItem: (key, type) => {
+    return key
+  },
+  removeItem: (key, type) => {
+    return false
+  },
+  clear: type => {
+    return false
+  },
+  getKeys: type => {
+    return []
   }
 }
