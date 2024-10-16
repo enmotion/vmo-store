@@ -2,7 +2,7 @@
  * @Author: enmotion
  * @Date: 2024-09-13 02:15:16
  * @Last Modified by: enmotion
- * @Last Modified time: 2024-10-16 19:55:47
+ * @Last Modified time: 2024-10-16 20:35:02
  */
 // import { ref, watch } from 'vue'
 import type { DataProps, BasicType, StoreParams, ExpireTime, StorageMethodProxy, CacheData, Capacity } from '@type'
@@ -36,8 +36,17 @@ export class VmoStore {
     this.$store = this._createProxy(this._data) // 创建缓存数据代理
     this._capacity = config.capacity ?? {}
     config.cacheInitCleanupMode && this.clearUnusedCache(config.cacheInitCleanupMode)
-    this._setCache('localStorage')
-    this._setCache('sessionStorage')
+    try {
+      this._setCache('localStorage')
+      this._setCache('sessionStorage')
+    } catch (err) {
+      this._data = {}
+      this._setCache('localStorage')
+      this._setCache('sessionStorage')
+      throw new Error(
+        `The currently cached data volume exceeds the storage capacity limit, and the data has become invalid.`
+      )
+    }
   }
   /**
    * 获取缓存呢数据
@@ -80,10 +89,18 @@ export class VmoStore {
     const keys = Object.keys(T._props).filter(key => T._props[key].storge == type)
     const store = T._pick(keys, T._data)
     const dataString = !T._cryptoKey ? JSON.stringify(store) : enCrypto(JSON.stringify(store), T._cryptoKey)
-    if (!T._capacity?.[type] || T._capacity?.[type] * 1024 >= new Blob([dataString]).size) {
+    if (!T._capacity?.[type] || T._capacity?.[type] >= new Blob([dataString]).size) {
+      console.log(type, T._capacity?.[type], new Blob([dataString]).size, dataString)
       T._storage.setItem(T._namespace, dataString, type) // 将数据缓存入持久化
     } else {
-      throw new Error('存储空间不够')
+      console.log(type, T._capacity?.[type], new Blob([dataString]).size, dataString)
+      throw new Error(
+        `The storage capacity of memory [${type}] overflows, with a limit of [${
+          T._capacity?.[type]
+        } byte], and a storage capacity of [${new Blob([dataString]).size} byte], resulting in an overflow of [${
+          new Blob([dataString]).size - T._capacity?.[type]
+        } byte].`
+      )
     }
   }
   /**
@@ -318,6 +335,19 @@ export class VmoStore {
     delete this._data[prop]
     delete this._props[prop]
     this._setCache(type)
+  }
+  public getCapacity() {
+    const T = this
+    return {
+      localStorage: {
+        used: new Blob([T._storage.getItem(T._namespace, 'localStorage') as string]).size,
+        limit: T._capacity?.localStorage ?? 'none'
+      },
+      sessionStorage: {
+        used: new Blob([T._storage.getItem(T._namespace, 'sessionStorage') as string]).size,
+        limit: T._capacity?.sessionStorage ?? 'none'
+      }
+    }
   }
   public getProps(key?: string) {
     return key ? this._props[key] : this._props

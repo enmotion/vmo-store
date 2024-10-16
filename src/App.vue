@@ -7,9 +7,6 @@ const cache = new VmoStore({
   version: 1, // 存储版本
   prefix: 'mods', // 前置名称
   cacheInitCleanupMode: 'self', // 缓存清理模式
-  capacity: {
-    localStorage: 1 // kb
-  },
   dataProps: {
     pluss: {
       type: [Function], // 类型约束
@@ -33,11 +30,8 @@ const cache = new VmoStore({
 })
 
 console.log(cache.$store.user) // [1233]
-cache.$store.user = [
-  'a',
-  'fdkasfjasdlfjsa',
-  'dfaddfadsasdfadsasdfadsasdfadsasdfadsasdfadsasdfadsassasdfaddfadsasdfadsasdfadsasdfadsasdfadsasdfadsasdfadsassasdfaddfadsasdfadsasdfadsasdfadsasdfadsasdfadsasdfadsassasdfaddfadsasdfadsasdfadsasdfadsasdfadsasdfadsasdfadsassasdfaddfadsasdfadsasdfadsasdfadsasdfadsasdfadsasdfadsassas'
-]
+cache.$store.user = ['a', '啊疯狂打是否开放', '啊疯狂打是否开放']
+cache.$store.user = ['a', '啊疯狂打是否开放', '啊疯狂打是否开中']
 console.log(cache.$store.user) // [1233]
 // cache.removeData('user')
 console.log(cache.$store.user) // [1233]
@@ -47,6 +41,7 @@ console.log(cache.$store.pluss(3, 3)) // 9
 setTimeout(() => {
   // 过期后再次使用
   console.log(cache.$store.pluss(3, 3)) // 6
+  console.log(cache.getCapacity())
 }, 3000)
 </script>
 
