@@ -2,44 +2,23 @@
  * @Author: enmotion
  * @Date: 2024-09-13 02:15:16
  * @Last Modified by: enmotion
- * @Last Modified time: 2024-10-15 18:09:20
+ * @Last Modified time: 2024-10-16 17:00:18
  */
 // import { ref, watch } from 'vue'
-import type { DataProps, BasicType, StoreParams, ExpireTime, StorageProxyMethods, CacheData } from '@type'
+import type { DataProps, BasicType, StoreParams, ExpireTime, StorageProxyMethods, CacheData, Capacity } from '@type'
 import { enCrypto, deCrypto } from './crypto-key'
-/**
- * 默认缓存代理,可以更改此处的方法，更换自己需要的缓存器
- *
- */
-const defaultStorage: StorageProxyMethods = {
-  setItem: (key, value, type) => {
-    const storage = type == 'localStorage' ? localStorage : sessionStorage
-    return storage.setItem(key, value)
-  },
-  getItem: (key, type) => {
-    const storage = type == 'localStorage' ? localStorage : sessionStorage
-    return storage.getItem(key)
-  },
-  removeItem: (key, type) => {
-    const storage = type == 'localStorage' ? localStorage : sessionStorage
-    return storage.removeItem(key)
-  },
-  clear: type => {
-    const storage = type == 'localStorage' ? localStorage : sessionStorage
-    return storage.clear()
-  }
-}
+import { defaultStorageMethodProxy } from './default-storage'
 /**
  * VmoStore:Class
  * 本地缓存管理类
  */
 export class VmoStore {
   private _cryptoKey: string | undefined // 加密 KEY【16】位任意字符
-  private _namespace: string // 命名空间
+  private _namespace: `${string}:${string}:${number}` // 命名空间
   private _props: DataProps // 缓存数据 元信息描述
-  // private _proxy_pool: WeakMap<object, any> = new WeakMap() // 代理池
   private _data: CacheData // 热数据 v:数组格式保存的数据,t:存储时间, k:是否要经过 eval 转化
   private _storage: StorageProxyMethods
+  // private _capacity: Capacity
   public $store: Record<string, any>
   /**
    * constructor:Function 构造函数
@@ -47,46 +26,54 @@ export class VmoStore {
    */
   constructor(config: StoreParams) {
     this._cryptoKey = config.cryptoKey // 加密 KEY【16】位任意字符
-    this._namespace = `${config.prefix ?? 'VMO-STORE'}:${config.namespace ?? 'NORMAL'}:${config.version ?? 0}` // 命名空间 前缀名:命名空间:版本号, 版本号作为清理数据的标识
+    this._namespace = `${config.prefix ?? 'VMO-STORE'}:${config.namespace ?? 'NORMAL'}:${
+      parseInt(config.version as string) ?? 0
+    }` // 命名空间 前缀名:命名空间:版本号, 版本号作为清理数据的标识
     this._props = config.dataProps // 数据属性描述
-    this._storage = config.storage ?? defaultStorage
+    this._storage = config.storage ?? defaultStorageMethodProxy
     this._data = this._getCache() // 缓存代理数据
+    // this._capacity = config.capacity ?? {}
+    // console.log(this._capacity)
     this.$store = this._createProxy(this._data) // 创建缓存数据代理
+    config.initClearUpMode && this.clearUnusedCache(config.initClearUpMode)
   }
   /**
    * 获取缓存呢数据
+   * 1. 获取所有 localStorage 中的缓存数据
+   * 2. 获取所有 sessionStorage 中的缓存数据
+   * 3. 依照 _props 中的约定，分别在 localStorage 与 sessionStorage 中取出相关数据，组装成最终的缓存数据
+   * 4. 清理缓存数据
    * @returns {Record<string,any>}
    */
   private _getCache() {
+    const T = this
     try {
-      const cache: { localStorage: Record<string, any>; sessionStorge: Record<string, any> } = {
+      const cache: { localStorage: Record<string, any>; sessionStorage: Record<string, any> } = {
         localStorage:
           JSON.parse(
-            !this._cryptoKey
-              ? this._storage.getItem(this._namespace, 'localStorage') ?? '{}'
-              : deCrypto(this._storage.getItem(this._namespace, 'localStorage') ?? '', this._cryptoKey)
+            !T._cryptoKey
+              ? T._storage.getItem(T._namespace, 'localStorage') ?? '{}'
+              : deCrypto(T._storage.getItem(T._namespace, 'localStorage') ?? '', T._cryptoKey)
           ) ?? {}, // 获取 localStorage 中缓存的全部数据
-        sessionStorge:
+        sessionStorage:
           JSON.parse(
-            !this._cryptoKey
-              ? this._storage.getItem(this._namespace, 'sessionStorge') ?? '{}'
-              : deCrypto(this._storage.getItem(this._namespace, 'sessionStorge') ?? '', this._cryptoKey)
+            !T._cryptoKey
+              ? T._storage.getItem(T._namespace, 'sessionStorage') ?? '{}'
+              : deCrypto(T._storage.getItem(T._namespace, 'sessionStorage') ?? '', T._cryptoKey)
           ) ?? {} // 获取 localStorage 中缓存的全部数据
       }
       const result: Record<string, { v: any[]; t: number; k?: boolean }> = {}
-      Object.keys(this._props).forEach(key => {
-        // console.warn(key, this._props[key].storge)
-        result[key] = cache[this._props[key].storge][key]
+      Object.keys(T._props).forEach(key => {
+        result[key] = cache[T._props[key].storge][key]
       })
       return result
     } catch (err) {
-      console.error(err)
+      console.warn(err)
       return {}
     }
   }
-  private _setCache(prop: string) {
+  private _setCache(type: 'sessionStorage' | 'localStorage') {
     const T = this
-    const type = T._props[prop].storge
     const keys = Object.keys(T._props).filter(key => T._props[key].storge == type)
     const store = T._pick(keys, T._data)
     T._storage.setItem(
@@ -122,19 +109,19 @@ export class VmoStore {
           if (Object.keys(T._props).includes(prop)) {
             // 存在:尝试取值
             const data = Reflect.get(target, prop, receiver)
-            let value: any = null
+            let value: any = data?.v
             // 获取属性的类型
             const types = T._getTypes(T._props[prop].type)
             // console.log(prop, types, 'types')
             // 获取属性值，必须满足 0:未设置过期时间||未过期 返回 缓存值 或 默认值
             if (!T._props[prop]?.expireTime || Date.now() < T._isExpired(prop, T._props[prop].expireTime)) {
-              value = data?.v ?? T._getDefaultValue(T._props[prop]?.default)
+              value = data?.k ? eval('(' + data?.v + ')') : data?.v ?? T._getDefaultValue(T._props[prop]?.default)
             } else {
               value = T._getDefaultValue(T._props[prop]?.default)
               // 发现默认值情况，不论是否存在该数据，都应该清理本地缓存 可以进一步优化
               if (!!data) {
                 delete target[prop] // 删除 target 中的数值
-                T._setCache(prop)
+                T._setCache(T._props[prop].storge)
               }
             }
             // 返回值，必须 0:类型匹配 否则返回 undefined
@@ -166,9 +153,13 @@ export class VmoStore {
           if (Object.keys(T._props).includes(prop)) {
             const types = T._getTypes(T._props[prop].type)
             if (types.includes(value.constructor)) {
-              const data = { v: value, t: Date.now() } // 更新数据
+              const data = {
+                v: value.constructor == Function ? value.toString() : value,
+                t: Date.now(),
+                k: value.constructor == Function ? true : undefined
+              } // 更新数据
               Reflect.set(target, prop, data, receiver) // 将数据更新到热数据
-              T._setCache(prop)
+              T._setCache(T._props[prop].storge)
               return true
             } else {
               throw new Error(
@@ -262,18 +253,61 @@ export class VmoStore {
     return type.constructor == Array ? type : [type]
   }
   /**
+   * 缓存回收
+   * @param type // all: 所有缓存, vmo:仅仅 vmo 维护的缓存
+   */
+  public clearUnusedCache(type: 'all' | 'self') {
+    const T = this
+    const itemKeys = T._storage.getKeys()
+    console.log('err')
+    switch (type) {
+      case 'all':
+        itemKeys
+          .filter(key => key != T._namespace)
+          .forEach(key => {
+            T._storage.removeItem(key, 'localStorage')
+            T._storage.removeItem(key, 'sessionStorage')
+          })
+        break
+      case 'self':
+        const prefixText = T._namespace.split(':').slice(0, -1).join(':') + ':'
+        const RegEx = new RegExp(`^${prefixText}\\d+$`)
+        itemKeys
+          .filter(key => {
+            return RegEx.test(key) && T._namespace !== key
+          })
+          .map(key => {
+            console.error('remove:', key)
+            T._storage.removeItem(key, 'localStorage')
+            T._storage.removeItem(key, 'sessionStorage')
+          })
+    }
+  }
+  /**
+   * 清理所有的缓存
+   * @param type
+   */
+  public clear(type?: 'localStorage' | 'sessionStorage') {
+    if (!!type) {
+      this._storage.clear(type)
+    } else {
+      this._storage.clear('localStorage')
+      this._storage.clear('sessionStorage')
+    }
+  }
+  /**
    * 获取缓存对象
    * @param prop
    * @returns
    */
-  public getItem(prop: string) {
+  public getData(prop: string) {
     return this.$store[prop]
   }
-  public setItem(prop: string, value: any) {
+  public setData(prop: string, value: any) {
     return (this.$store[prop] = value)
   }
-  public getProps() {
-    return this._props
+  public getProps(key?: string) {
+    return key ? this._props[key] : this._props
   }
   public getCryptoKey() {
     return this._cryptoKey
