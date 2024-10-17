@@ -2,7 +2,7 @@
  * @Author: enmotion
  * @Date: 2024-09-13 02:15:16
  * @Last Modified by: enmotion
- * @Last Modified time: 2024-10-16 20:38:32
+ * @Last Modified time: 2024-10-17 10:18:26
  */
 // import { ref, watch } from 'vue'
 import type { DataProps, BasicType, StoreParams, ExpireTime, StorageMethodProxy, CacheData, Capacity } from '@type'
@@ -26,17 +26,22 @@ export class VmoStore {
    * @param config <StoreParams>
    */
   constructor(config: StoreParams) {
-    this._cryptoKey = config.cryptoKey // 加密 KEY【16】位任意字符
-    this._namespace = `${config.prefix ?? 'VMO-STORE'}:${config.namespace ?? 'NORMAL'}:${
-      parseInt(config.version as string) ?? 0
-    }` // 命名空间 前缀名:命名空间:版本号, 版本号作为清理数据的标识
-    this._props = config.dataProps // 数据属性描述
-    this._storage = config.storage ?? defaultStorageMethodProxy
-    this._data = this._getCache() // 缓存代理数据
-    this.$store = this._createProxy(this._data) // 创建缓存数据代理
-    this._capacity = config.capacity ?? {}
-    config.cacheInitCleanupMode && this.clearUnusedCache(config.cacheInitCleanupMode)
     try {
+      this._cryptoKey = config.cryptoKey // 加密 KEY【16】位任意字符
+      this._namespace = `${config.prefix ?? 'VMO-STORE'}:${config.namespace ?? 'NORMAL'}:${
+        parseInt(config.version as string) ?? 0
+      }` // 命名空间 前缀名:命名空间:版本号, 版本号作为清理数据的标识
+      this._props = config.dataProps // 数据属性描述
+      this._storage = config.storage ?? defaultStorageMethodProxy
+      this._data = this._getCache() // 缓存代理数据
+      this.$store = this._createProxy(this._data) // 创建缓存数据代理
+      this._capacity = config.capacity ?? {}
+      Object.defineProperty(this, 'constantValue', {
+        value: config.capacity ?? {}, // 属性值
+        writable: false, // 不可写
+        configurable: false // 不可配置（不可删除或重新定义）
+      })
+      config.cacheInitCleanupMode && this.clearUnusedCache(config.cacheInitCleanupMode)
       this._setCache('localStorage')
       this._setCache('sessionStorage')
     } catch (err) {
@@ -271,8 +276,8 @@ export class VmoStore {
     return type.constructor == Array ? type : [type]
   }
   /**
-   * 缓存回收
-   * @param type // all: 所有缓存, vmo:仅仅 vmo 维护的缓存
+   * 缓存回收 除自身 命名空间 外
+   * @param type // all: 所有缓存, self:仅仅 相同命名空间，但是版本不同的回收
    */
   public clearUnusedCache(type: 'all' | 'self') {
     const T = this
@@ -322,20 +327,52 @@ export class VmoStore {
   public setData(prop: string, value: any) {
     return (this.$store[prop] = value)
   }
-  public removeData(prop: string) {
-    const type = this._props[prop].storge
-    delete this._data[prop]
-    this._setCache(type)
-  }
+
   public updateProp(props: DataProps) {
     this._props = Object.assign(this._props, props)
   }
-  public removeProp(prop: string) {
-    const type = this._props[prop].storge
-    delete this._data[prop]
-    delete this._props[prop]
-    this._setCache(type)
+  /**
+   * 清除数据
+   * 仅仅清除对应的缓存值，不会更改其声明内容
+   * @param prop
+   */
+  public clearData(prop: string | string[]) {
+    if (prop.constructor == String) {
+      const type = this._props[prop].storge
+      delete this._data[prop]
+      this._setCache(type)
+    } else {
+      ;(prop as string[]).forEach(key => {
+        const type = this._props[key].storge
+        delete this._data[key]
+        this._setCache(type)
+      })
+    }
   }
+  /**
+   * 清除属性
+   * 会清除相关的属性声明与缓存值
+   * @param prop
+   */
+  public removeProp(prop: string | string[]) {
+    if (prop.constructor == String) {
+      const type = this._props[prop].storge
+      delete this._data[prop]
+      delete this._props[prop]
+      this._setCache(type)
+    } else {
+      ;(prop as string[]).forEach(key => {
+        const type = this._props[key].storge
+        delete this._data[key]
+        delete this._props[key]
+        this._setCache(type)
+      })
+    }
+  }
+  /**
+   * huoqu
+   * @returns
+   */
   public getCapacity() {
     const T = this
     return {

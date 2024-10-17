@@ -2,7 +2,7 @@
 import { VmoStore } from '../index'
 
 const cache = new VmoStore({
-  cryptoKey: 'mods', // 加密密钥
+  // cryptoKey: 'mods', // 加密密钥
   namespace: 'enmo', // 命名空间
   version: 1, // 存储版本
   prefix: 'mods', // 前置名称
@@ -17,7 +17,7 @@ const cache = new VmoStore({
     user: {
       type: Array,
       default: () => [1233],
-      // expireTime: '2m',
+      // expireTime: '2024-10-17 09:57:00',
       storge: 'sessionStorage'
     },
     age: {
@@ -28,13 +28,11 @@ const cache = new VmoStore({
     }
   }
 })
-
-console.log(cache.$store.user) // [1233]
+console.log(cache.$store.user, '1') // [1233]
 cache.$store.user = ['a', '啊疯狂打是否开放', '啊疯狂打是否开放']
-cache.$store.user = ['a', '啊疯狂打是否开放', '啊疯狂打是否开中']
-console.log(cache.$store.user) // [1233]
+console.log(cache.$store.user, '2') // [1233]
 // cache.removeData('user')
-console.log(cache.$store.user) // [1233]
+console.log(cache.$store.user, '3') // [1233]
 console.log(cache.$store.pluss(3, 3)) // 6
 cache.$store.pluss = (a: number, b: number) => a * b
 console.log(cache.$store.pluss(3, 3)) // 9

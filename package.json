@@ -2,7 +2,7 @@
   "name": "vmo-store",
   "version": "0.0.0-beta.0",
   "type": "module",
-  "private": true,
+  "private": false,
   "description": "storage proxy",
   "main": "./dist/vmo-store.umd.cjs",
   "module": "./dist/vmo-store.js",
