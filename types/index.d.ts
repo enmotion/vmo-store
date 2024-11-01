@@ -36,9 +36,9 @@ export type DataProps = Record<
   string,
   {
     type: BasicType | BasicType[] // 类型
-    default: string | number | boolean | { (): any } // 默认值
+    default?: string | number | boolean | { (): any } // 默认值
     expireTime?: ExpireTime
-    storge: 'sessionStorage' | 'localStorage'
+    storge?: 'sessionStorage' | 'localStorage'
   }
 >
 

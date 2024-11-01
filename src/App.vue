@@ -2,11 +2,50 @@
 import { VmoStore } from '../index'
 
 const cache = new VmoStore({
-  // cryptoKey: 'mods', // 加密密钥
+  cryptoKey: 'esm', // 加密密钥
   namespace: 'enmo', // 命名空间
   version: 1, // 存储版本
   prefix: 'mods', // 前置名称
   cacheInitCleanupMode: 'self', // 缓存清理模式
+  // storage: {
+  //   setItem: function (key, value, type) {
+  //     let cache = document.cookie.split(';')
+  //     console.log(cache, document.cookie, 'cache')
+  //     const data: Record<string, string> = {}
+  //     cache.forEach(item => {
+  //       const itemData = item.split('=')
+  //       data[itemData[0]] = itemData[1]
+  //     })
+  //     data[key] = value
+  //     let cookieStr = ''
+  //     Object.keys(data).forEach(key => {
+  //       cookieStr = cookieStr + `${key}=${data[key]};`
+  //     })
+  //     console.error(cookieStr, data)
+  //     document.cookie = cookieStr
+  //     return true
+  //   },
+  //   getItem: function (key, type) {
+  //     let cache = document.cookie.split(';')
+  //     const data: Record<string, string> = {}
+  //     cache.forEach(item => {
+  //       const itemData = item.split('=')
+  //       data[itemData[0]] = itemData[1]
+  //     })
+  //     console.error(data)
+  //     return data[key]
+  //   },
+  //   removeItem: function (key, type) {
+  //     return true
+  //   },
+  //   clear: function (type) {
+  //     return true
+  //   },
+  //   getKeys: function (type) {
+  //     let ca = document.cookie.split(';')
+  //     return ca.map(item => item[0])
+  //   }
+  // },
   dataProps: {
     pluss: {
       type: [Function], // 类型约束
@@ -18,7 +57,7 @@ const cache = new VmoStore({
       type: Array,
       default: () => [1233],
       // expireTime: '2024-10-17 09:57:00',
-      storge: 'sessionStorage'
+      storge: 'localStorage'
     },
     age: {
       type: [String, Number, Array, Function, Object],
@@ -30,17 +69,20 @@ const cache = new VmoStore({
 })
 console.log(cache.$store.user, '1') // [1233]
 cache.$store.user = ['a', '啊疯狂打是否开放', '啊疯狂打是否开放']
+
 console.log(cache.$store.user, '2') // [1233]
 // cache.removeData('user')
 console.log(cache.$store.user, '3') // [1233]
 console.log(cache.$store.pluss(3, 3)) // 6
-cache.$store.pluss = (a: number, b: number) => a * b
+// cache.$store.pluss = (a: number, b: number) => a * b
 console.log(cache.$store.pluss(3, 3)) // 9
 setTimeout(() => {
   // 过期后再次使用
   console.log(cache.$store.pluss(3, 3)) // 6
   console.log(cache.getCapacity())
 }, 3000)
+const W: any = window
+W.cache = cache
 </script>
 
 <template>

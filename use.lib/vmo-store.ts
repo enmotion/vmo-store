@@ -81,7 +81,7 @@ export class VmoStore {
       const result: Record<string, { v: any[]; t: number; k?: boolean }> = {}
       console.log(cache, 'cache')
       Object.keys(T._props).forEach(key => {
-        result[key] = cache[T._props[key].storge][key]
+        result[key] = cache[T._props[key].storge ?? 'localStorage'][key]
       })
       return result
     } catch (err) {
@@ -146,7 +146,7 @@ export class VmoStore {
               // 发现默认值情况，不论是否存在该数据，都应该清理本地缓存 可以进一步优化
               if (!!data) {
                 delete target[prop] // 删除 target 中的数值
-                T._setCache(T._props[prop].storge)
+                T._setCache(T._props[prop].storge ?? 'localStorage')
               }
             }
             // 返回值，必须 0:类型匹配 否则返回 undefined
@@ -184,7 +184,7 @@ export class VmoStore {
                 k: value.constructor == Function ? true : undefined
               } // 更新数据
               Reflect.set(target, prop, data, receiver) // 将数据更新到热数据
-              T._setCache(T._props[prop].storge)
+              T._setCache(T._props[prop].storge ?? 'localStorage')
               return true
             } else {
               throw new Error(
@@ -257,7 +257,7 @@ export class VmoStore {
    * @returns
    */
   private _getDefaultValue(
-    value:
+    value?:
       | string
       | number
       | boolean
@@ -265,7 +265,7 @@ export class VmoStore {
           (): any
         }
   ) {
-    return value.constructor == Function ? (value as () => any)() : value
+    return value?.constructor == Function ? (value as () => any)() : value
   }
   /**
    * 获取缓存对象的声明类型数组，方便判断
@@ -338,12 +338,12 @@ export class VmoStore {
    */
   public clearData(prop: string | string[]) {
     if (prop.constructor == String) {
-      const type = this._props[prop].storge
+      const type = this._props[prop].storge ?? 'localStorage'
       delete this._data[prop]
       this._setCache(type)
     } else {
       ;(prop as string[]).forEach(key => {
-        const type = this._props[key].storge
+        const type = this._props[key].storge ?? 'localStorage'
         delete this._data[key]
         this._setCache(type)
       })
@@ -356,13 +356,13 @@ export class VmoStore {
    */
   public removeProp(prop: string | string[]) {
     if (prop.constructor == String) {
-      const type = this._props[prop].storge
+      const type = this._props[prop].storge ?? 'localStorage'
       delete this._data[prop]
       delete this._props[prop]
       this._setCache(type)
     } else {
       ;(prop as string[]).forEach(key => {
-        const type = this._props[key].storge
+        const type = this._props[key].storge ?? 'localStorage'
         delete this._data[key]
         delete this._props[key]
         this._setCache(type)
