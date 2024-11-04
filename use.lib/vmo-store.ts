@@ -14,12 +14,12 @@ import { defaultStorageMethodProxy } from './default-storage'
  * 本地缓存管理类
  */
 export class VmoStore {
-  private _cryptoKey: string | undefined // 加密 KEY【16】位任意字符
+  private _cryptoKey: string | undefined // 加密 KEY任意字符
   private _namespace: `${string}:${string}:${number}` // 命名空间
   private _props: DataProps // 缓存数据 元信息描述
   private _data: CacheData // 热数据 v:数组格式保存的数据,t:存储时间, k:是否要经过 eval 转化
-  private _storage: StorageMethodProxy
-  private _capacity: Capacity
+  private _storage: StorageMethodProxy // 存储层方法，可替换存储层，以适应不同的 前端环境
+  private _capacity: Capacity // 容量
   public $store: Record<string, any>
   /**
    * constructor:Function 构造函数
@@ -206,9 +206,9 @@ export class VmoStore {
   }
   /**
    * pick 方法
-   * @param keys
-   * @param data
-   * @returns
+   * @param keys 挑选出来的可key
+   * @param data 目标对象
+   * @returns {Reocrd<string,any>}
    */
   private _pick(keys: string[], data: Record<string, any>) {
     const result: Record<string, any> = {}

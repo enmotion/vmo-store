@@ -1,70 +1,134 @@
-# vmo-store
+# VmoStore
 
-vmo-store 是基于原生缓存的上层封装库，其目的主要是为解决对缓存的类型约束，命名空间管理(避免污染), 过期判定，类型约束，有效存储空间维护 5 大功能
-其采用了 proxy 代理的设计模式，对缓存操作进行了底层上的自动化处理封装。让缓存的管控变得更为精准，简单，快捷！
+`VmoStore` 是一个本地缓存管理类，用于在浏览器环境中方便地管理、存储和检索数据。它设计为具有版本控制、命名空间隔离和可配置的存储容量限制功能，使其适用于各种缓存场景。
 
-## 如何安装
+## 特性
 
-```node
-npm i vmo-store --save
+- 支持多种数据类型的缓存。
+- 配置化的数据结构说明和过期时间。
+- 存储命名空间和版本管理。
+- 支持数据加密（可选）。
+- 基于容量限制的存储管理和缓存清理。
+
+## 安装
+
+```javascript
+npm i vmo-store
 ```
 
-## 快速开始
+## 使用说明
 
-```ts
-import { VmoStore } from '../index'
+#### 创建实例
 
-const cache = new VmoStore({
-  cryptoKey: '123', // 加密密钥
-  namespace: 'enmo', // 命名空间
-  version: 1, // 存储版本
-  prefix: 'mods', // 前置名称
-  cacheInitCleanupMode: 'self', // 缓存清理模式
+```javascript
+const vmoStore = new VmoStore({
+  namespace: 'myApp', // 命名空间
+  prefix: 'APP', // 前置别名
+  version: 1, // 版本
+  cryptoKey: 'yourCryptoKeyHere', // 加密KEY,如果为空，则不会启用缓存加密能力
   dataProps: {
-    plused: {
-      type: [Function], // 类型约束
-      default: () => (a: number, b: number) => a + b, // 默认值，类 vue props
-      // expireTime: '2s',
-      storge: 'sessionStorage' // 指定存储器
-    },
     user: {
-      type: Array,
-      default: () => [1233],
-      // expireTime: '2m',
-      storge: 'sessionStorage'
+      type: String, // 数据类型 支持多类型[String,Array,Number]
+      storge: 'localStorage', // 指定 localStorage
+      default: '111', // 默认值
+      expireTime: '1d' // 过期时间 1天,
+      /**
+       * 过期时间可以设置为3种
+       * 1. 数值，以毫秒为加时方式，以写入或者更新是时间为起点值+expireTime
+       * 2. 类型字符 s秒,m分,h时,d天 先转换为毫秒数值，再1写入或者更新是时间为起点值+expireTime
+       * 2. 固定日期格式 "YYYY-MM-DD HH:mm:ss" 定期过期方式
+       */
     },
-    age: {
-      type: [String, Number, Array, Function, Object],
-      default: () => ['age'],
-      expireTime: '3.5s', // 过期时间
-      storge: 'localStorage'
+    settings: {
+      type: [Object, Array], // 数据类型
+      default: () => ({}), // 引用型默认值,请都采用函数返回形式
+      storge: 'sessionStorage' // 指定 sessionStorage 缓存器
     }
-  }
+  }, // 存储数据声明
+  capacity: {
+    localStorage: 5000, // localStorage 存储上限
+    sessionStorage: 3000 // sessionStorage 存储上限
+  },
+  cacheInitCleanupMode: 'self' // 初始化时清理缓存, 可选 'all':清楚除自身外所有缓存数据 或 'self':仅清除除自身版本外，相同命名空间与前置别名的缓存的
 })
-
-console.log(cache.$store.user) // [1233]
-console.log(cache.$store.plused(3, 3), 'a') // 6
-// cache.$store.plused = (a: number, b: number) => a * b
-console.log(cache.$store.plused(3, 3), 'b') // 9
-setTimeout(() => {
-  // 过期后再次使用
-  console.log(cache.$store.plused(3, 3)) // 6
-}, 3000)
 ```
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+#### 设置数据
 
-## Recommended IDE Setup
+```javascript
+vmoStore.setData('user', 'John Doe')
+```
 
-- [VS Code](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
+#### 获取数据
 
-## Type Support For `.vue` Imports in TS
+```javascript
+const user = vmoStore.getData('user')
+```
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin) to make the TypeScript language service aware of `.vue` types.
+#### 清理数据
 
-If the standalone TypeScript plugin doesn't feel fast enough to you, Volar has also implemented a [Take Over Mode](https://github.com/johnsoncodehk/volar/discussions/471#discussioncomment-1361669) that is more performant. You can enable it by the following steps:
+```javascript
+// 按属性清空数据
+vmoStore.clearData('user')
 
-1. Disable the built-in TypeScript Extension
-   1. Run `Extensions: Show Built-in Extensions` from VSCode's command palette
-   2. Find `TypeScript and JavaScript Language Features`, right click and select `Disable (Workspace)`
-2. Reload the VSCode window by running `Developer: Reload Window` from the command palette.
+// 清理所有缓存数据
+vmoStore.clear('localStorage')
+```
+
+#### 更新属性定义
+
+```javascript
+vmoStore.updateProp({
+  newProp: { type: Number, default: 0, storge: 'localStorage' }
+})
+```
+
+#### 获取缓存属性
+
+```javascript
+const props = vmoStore.getProps()
+```
+
+#### 获取命名空间
+
+```javascript
+const namespace = vmoStore.getNameSpace()
+```
+
+#### 获取存储容量
+
+```javascript
+const capacity = vmoStore.getCapacity()
+```
+
+### 方法详解
+
+- constructor(config: StoreParams): 初始化 `VmoStore` 实例。config 对象用于配置命名空间、版本、加密密钥、数据属性、存储容量和缓存清理模式。
+
+- setData(prop: string, value: any): 设置缓存数据。
+
+- getData(prop: string): 获取缓存数据。
+
+- clear(type?: 'localStorage' | 'sessionStorage'): 清理指定类型的存储，若不指定清理所有存储。
+
+- clearData(prop: string | string[]): 清理指定缓存数据。
+
+- removeProp(prop: string | string[]): 移除缓存声明和数据。
+
+- updateProp(props: DataProps): 更新缓存属性说明。
+
+- getCapacity(): 获取当前的存储容量使用情况和限制。
+
+- getProps(key?: string): 获取缓存属性定义。
+
+- getNameSpace(): 获取命名空间定义。
+
+### 错误处理
+
+`VmoStore` 在一些场景下可能会抛出错误，例如：存储容量超过限制，属性类型不匹配等。请确保在数据量较大时配置足够的允许存储空间。
+
+### 注意事项
+
+- 若使用数据加密，请确保加密密钥的长度符合要求，并注意保密。
+- 当设定了存储容量限制时，数据写入可能会因为超出限制而抛出错误。
+- 在使用 eval 时请确保数据来源的安全性，以免导致安全漏洞。
