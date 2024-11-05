@@ -9,6 +9,9 @@ import type { DataProps, BasicType, StoreParams, ExpireTime, StorageMethodProxy,
 import { enCrypto, deCrypto } from './crypto-key'
 import { defaultStorageMethodProxy } from './default-storage'
 
+const NormlFunc = function () {}.constructor
+const AsyncFunc = async function () {}.constructor
+// console.log(Function == NormlFunc, isAsyncFunction AsyncFunc)
 /**
  * VmoStore:Class
  * 本地缓存管理类
@@ -91,7 +94,9 @@ export class VmoStore {
   }
   private _setCache(type: 'sessionStorage' | 'localStorage') {
     const T = this
-    const keys = Object.keys(T._props).filter(key => T._props[key].storge == type)
+    const keys = Object.keys(T._props).filter(
+      key => T._props[key].storge == type && Date.now() < T._getExpiredTime(key, T._props[key]?.expireTime)
+    )
     const store = T._pick(keys, T._data)
     const dataString = !T._cryptoKey ? JSON.stringify(store) : enCrypto(JSON.stringify(store), T._cryptoKey)
     if (!T._capacity?.[type] || (T._capacity[type] as number) >= new Blob([dataString]).size) {
@@ -121,7 +126,7 @@ export class VmoStore {
        * 处理步骤：
        * 1. 判断该属性是否为 _props 内声明的合法属性
        * 2. 判断该属性 是否过期
-       * 3. 判断类型是否符合 _props 声明预期
+       * 3. 判断类型是否符合 _props 声明预期 如果声明为 Function 类型，则同步异步方法都支持
        * 附加操作：
        * 1. 如果过期，则需要进行持久化缓存的对应清理
        * @param target 代理的对象
@@ -135,14 +140,13 @@ export class VmoStore {
           if (Object.keys(T._props).includes(prop)) {
             // 存在:尝试取值
             const data = Reflect.get(target, prop, receiver)
-            let value: any = data?.v
+            let value: any // 声明值但暂不赋值
             // 获取属性的类型
             const types = T._getTypes(T._props[prop].type)
             // 获取属性值，必须满足 0:未设置过期时间||未过期 返回 缓存值 或 默认值
-            if (!T._props[prop]?.expireTime || Date.now() < T._isExpired(prop, T._props[prop].expireTime)) {
-              value = data?.k ? eval('(' + data?.v + ')') : data?.v ?? T._getDefaultValue(T._props[prop]?.default)
+            if (!T._props[prop]?.expireTime || Date.now() < T._getExpiredTime(prop, T._props[prop].expireTime)) {
+              value = data?.k ? eval('(' + data?.v + ')') : data?.v // 如过值未过期，则返回真正的值，函数形式的值会由字符串转为函数
             } else {
-              value = T._getDefaultValue(T._props[prop]?.default)
               // 发现默认值情况，不论是否存在该数据，都应该清理本地缓存 可以进一步优化
               if (!!data) {
                 delete target[prop] // 删除 target 中的数值
@@ -150,7 +154,10 @@ export class VmoStore {
               }
             }
             // 返回值，必须 0:类型匹配 否则返回 undefined
-            return types.includes(value?.constructor) ? value : undefined
+            return types.includes(value?.constructor) ||
+              (types.includes(Function) && [NormlFunc, AsyncFunc].includes(value?.constructor))
+              ? value
+              : T._getDefaultValue(T._props[prop]?.default)
           } else {
             // 不存在:直接返回 undefined
             return undefined
@@ -163,7 +170,7 @@ export class VmoStore {
        * 写入代理对象的属性值
        * 处理步骤：
        * 1. 判断该属性是否为 _props 内声明的合法属性
-       * 2. 判断写入类型，是否为声明内约束的合法类型
+       * 2. 判断写入类型，是否为声明内约束的合法类型, 如果声明为 Function 类型，则同步异步方法都支持
        * 3. 更新热数据
        * 4. 更新持久化数据
        * @param target
@@ -177,18 +184,21 @@ export class VmoStore {
           /* 键名对应的 缓存数据 元信息描述 是否存在  */
           if (Object.keys(T._props).includes(prop)) {
             const types = T._getTypes(T._props[prop].type)
-            if (types.includes(value?.constructor)) {
+            if (
+              types.includes(value?.constructor) ||
+              (types.includes(Function) && [NormlFunc, AsyncFunc].includes(value?.constructor))
+            ) {
               const data = {
-                v: value.constructor == Function ? value.toString() : value,
+                v: [NormlFunc, AsyncFunc].includes(value.constructor) ? value.toString() : value,
                 t: Date.now(),
-                k: value.constructor == Function ? true : undefined
+                k: [NormlFunc, AsyncFunc].includes(value.constructor) ? true : undefined
               } // 更新数据
               Reflect.set(target, prop, data, receiver) // 将数据更新到热数据
               T._setCache(T._props[prop].storge ?? 'localStorage')
               return true
             } else {
               throw new Error(
-                `Property [${prop}] expects a type of [${types.map(
+                `VmoStore: Property [${prop}] expects a type of [${types.map(
                   constructor => (constructor as any)?.name
                 )}], but the actual obtained type is ${value?.constructor?.name}.`
               )
@@ -197,7 +207,7 @@ export class VmoStore {
             throw new Error('当前附值，并未声明')
           }
         } catch (err) {
-          throw err
+          throw err as Error
         }
       }
     }
@@ -226,7 +236,7 @@ export class VmoStore {
    * @param time 过期时间
    * @returns {number}
    */
-  private _isExpired(prop: string, time: ExpireTime = Date.now() + 1000): number {
+  private _getExpiredTime(prop: string, time: ExpireTime = Date.now() + 1000): number {
     const T = this
     if (time.constructor == Number) {
       return T._data[prop]?.t + Math.abs(time)

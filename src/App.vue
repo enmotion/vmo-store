@@ -54,9 +54,9 @@ const cache = new VmoStore({
       storge: 'localStorage' // 指定存储器
     },
     user: {
-      type: Array,
-      default: () => [1233],
-      // expireTime: '2024-10-17 09:57:00',
+      type: [Function],
+      default: () => (a: number, b: number) => a + b,
+      expireTime: '1m',
       storge: 'localStorage'
     },
     age: {
@@ -67,22 +67,37 @@ const cache = new VmoStore({
     }
   }
 })
-console.log(cache.$store.user, '1') // [1233]
-cache.$store.user = ['a', '啊疯狂打是否开放', '啊疯狂打是否开放']
+async function a() {
+  const ss = await cache.$store.user(8, 8)
+  console.log(ss)
+}
+a()
+// console.log( cache.$store.user(2, 1), '1') // [1233]
+try {
+  // cache.$store.user = async function (a: number, b: number) {
+  //   return new Promise((resolve, reject) => {
+  //     setTimeout(() => {
+  //       resolve(a * b + ' /aaa')
+  //     }, 1000)
+  //   })
+  // }
+} catch (err) {
+  console.log(err)
+}
 
-console.log(cache.$store.user, '2') // [1233]
-// cache.removeData('user')
-console.log(cache.$store.user, '3') // [1233]
-console.log(cache.$store.pluss(3, 3)) // 6
-// cache.$store.pluss = (a: number, b: number) => a * b
-console.log(cache.$store.pluss(3, 3)) // 9
-setTimeout(() => {
-  // 过期后再次使用
-  console.log(cache.$store.pluss(3, 3)) // 6
-  console.log(cache.getCapacity())
-}, 3000)
-const W: any = window
-W.cache = cache
+// console.log(cache.$store.user, '2') // [1233]
+// // cache.removeData('user')
+// console.log(cache.$store.user, '3') // [1233]
+// console.log(cache.$store.pluss(3, 3)) // 6
+// // cache.$store.pluss = (a: number, b: number) => a * b
+// console.log(cache.$store.pluss(3, 3)) // 9
+// setTimeout(() => {
+//   // 过期后再次使用
+//   console.log(cache.$store.pluss(3, 3)) // 6
+//   console.log(cache.getCapacity())
+// }, 3000)
+// const W: any = window
+// W.cache = cache
 </script>
 
 <template>
