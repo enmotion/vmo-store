@@ -129,19 +129,15 @@ describe('VmoStore defaultValue', () => {
     expect(base.getData('name')).to.equal('default=name==')
   })
   it('number type default should get 1', () => {
-    // base.clearData(['name', 'age', 'isMale', 'hobbys', 'props', 'method'])
     expect(base.getData('age')).to.equal(1)
   })
   it('boolean type default should get a false', () => {
-    // base.clearData(['name', 'age', 'isMale', 'hobbys', 'props', 'method'])
     expect(base.getData('isMale')).to.equal(false)
   })
   it('array type should get []', () => {
-    // base.clearData(['name', 'age', 'isMale', 'hobbys', 'props', 'method'])
     expect(JSON.stringify(base.getData('hobbys'))).to.equal(JSON.stringify([]))
   })
   it('object type should get {}', () => {
-    // base.clearData(['name', 'age', 'isMale', 'hobbys', 'props', 'method'])
     expect(JSON.stringify(base.getData('props'))).to.equal(JSON.stringify({}))
   })
   it('function type should get 6', async () => {
@@ -150,7 +146,7 @@ describe('VmoStore defaultValue', () => {
       return new Promise(resolve => {
         setTimeout(() => {
           resolve(base.getData('method')(2, 3))
-        }, 1000)
+        }, 0)
       })
     }
     await expect(ss()).to.eventually.equal(6)

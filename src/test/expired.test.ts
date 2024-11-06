@@ -11,148 +11,122 @@ const base = new VmoStore({
   version: 1, // 存储版本
   prefix: 'mods', // 前置名称
   cacheInitCleanupMode: 'self', // 缓存清理模式
-  // storage: {
-  //   setItem: function (key, value, type) {
-  //     let cache = document.cookie.split(';')
-  //     console.log(cache, document.cookie, 'cache')
-  //     const data: Record<string, string> = {}
-  //     cache.forEach(item => {
-  //       const itemData = item.split('=')
-  //       data[itemData[0]] = itemData[1]
-  //     })
-  //     data[key] = value
-  //     let cookieStr = ''
-  //     Object.keys(data).forEach(key => {
-  //       cookieStr = cookieStr + `${key}=${data[key]};`
-  //     })
-  //     console.error(cookieStr, data)
-  //     document.cookie = cookieStr
-  //     return true
-  //   },
-  //   getItem: function (key, type) {
-  //     let cache = document.cookie.split(';')
-  //     const data: Record<string, string> = {}
-  //     cache.forEach(item => {
-  //       const itemData = item.split('=')
-  //       data[itemData[0]] = itemData[1]
-  //     })
-  //     console.error(data)
-  //     return data[key]
-  //   },
-  //   removeItem: function (key, type) {
-  //     return true
-  //   },
-  //   clear: function (type) {
-  //     return true
-  //   },
-  //   getKeys: function (type) {
-  //     let ca = document.cookie.split(';')
-  //     return ca.map(item => item[0])
-  //   }
-  // },
   dataProps: {
     name: {
       type: String,
       default: 'default=name==',
+      expireTime: '1s',
       storge: 'localStorage'
     },
     age: {
       type: Number,
       default: 1,
+      expireTime: '1s',
       storge: 'localStorage'
     },
     isMale: {
       type: Boolean,
       default: false,
+      expireTime: '1s',
       storge: 'localStorage'
     },
     hobbys: {
       type: Array,
       default: () => [],
+      expireTime: '1s',
       storge: 'localStorage'
     },
     props: {
       type: Object,
       default: () => ({}),
+      expireTime: '1s',
       storge: 'localStorage'
     },
     method: {
       type: Function,
       default: () => (a: number, b: number) => a * b,
+      expireTime: '1s',
       storge: 'localStorage'
     }
-    // pluss: {
-    //   type: [Function], // 类型约束
-    //   default: () => (a: number, b: number) => a + b, // 默认值，类 vue props
-    //   // expireTime: '2s',
-    //   storge: 'localStorage' // 指定存储器
-    // },
-    // user: {
-    //   type: [Function, String],
-    //   default: () => (a: number, b: number) => a + b,
-    //   expireTime: '1m',
-    //   storge: 'localStorage'
-    // }
   }
 })
-describe('VmoStore Base', () => {
-  it('string type should set and get a value', () => {
+describe('VmoStore data Expired test', () => {
+  it('string expired test', async () => {
+    const record: Record<string, any> = {}
     base.setData('name', 'mod')
-    expect(base.getData('name')).to.equal('mod')
-  })
-  it('number type should set and get a value', () => {
-    base.setData('age', 12)
-    expect(base.getData('age')).to.equal(12)
-  })
-  it('boolean type should set and get a value', () => {
-    base.setData('isMale', true)
-    expect(base.getData('isMale')).to.equal(true)
-  })
-  it('array type should set and get a value', () => {
-    base.setData('hobbys', [1, 2, 3])
-    expect(JSON.stringify(base.getData('hobbys'))).to.equal(JSON.stringify([1, 2, 3]))
-  })
-  it('object type should set and get a value', () => {
-    base.setData('props', { name: 'mode2' })
-    expect(JSON.stringify(base.getData('props'))).to.equal(JSON.stringify({ name: 'mode2' }))
-  })
-  it('function type should set and get a value', () => {
-    base.setData('method', (a: number, b: number) => a * b - a)
-    console.log(localStorage.getItem(localStorage.key(0) as string), 'ccc')
-    expect(base.getData('method')(2, 3)).to.equal(4)
-  })
-})
-
-describe('VmoStore defaultValue', () => {
-  it('string type default should get a default=name==', () => {
-    base.clearData(['name', 'age', 'isMale', 'hobbys', 'props', 'method'])
-    expect(base.getData('name')).to.equal('default=name==')
-  })
-  it('number type default should get 1', () => {
-    // base.clearData(['name', 'age', 'isMale', 'hobbys', 'props', 'method'])
-    expect(base.getData('age')).to.equal(1)
-  })
-  it('boolean type default should get a false', () => {
-    // base.clearData(['name', 'age', 'isMale', 'hobbys', 'props', 'method'])
-    expect(base.getData('isMale')).to.equal(false)
-  })
-  it('array type should get []', () => {
-    // base.clearData(['name', 'age', 'isMale', 'hobbys', 'props', 'method'])
-    expect(JSON.stringify(base.getData('hobbys'))).to.equal(JSON.stringify([]))
-  })
-  it('object type should get {}', () => {
-    // base.clearData(['name', 'age', 'isMale', 'hobbys', 'props', 'method'])
-    expect(JSON.stringify(base.getData('props'))).to.equal(JSON.stringify({}))
-  })
-  it('function type should get 6', async () => {
-    console.log(localStorage.getItem(localStorage.key(0) as string), 'aaaaa')
-    function ss() {
-      return new Promise(resolve => {
+    record['o'] = base.getData('name')
+    await expect(
+      new Promise(resolve => {
         setTimeout(() => {
-          resolve(base.getData('method')(2, 3))
+          record['n'] = base.getData('name')
+          resolve(JSON.stringify(record))
         }, 1000)
       })
-    }
-    await expect(ss()).to.eventually.equal(6)
+    ).to.eventually.equal(JSON.stringify({ o: 'mod', n: 'default=name==' }))
+  })
+  it('number expired test', async () => {
+    const record: Record<string, any> = {}
+    base.setData('age', 2)
+    record['o'] = base.getData('age')
+    await expect(
+      new Promise(resolve => {
+        setTimeout(() => {
+          record['n'] = base.getData('age')
+          resolve(JSON.stringify(record))
+        }, 1000)
+      })
+    ).to.eventually.equal(JSON.stringify({ o: 2, n: 1 }))
+  })
+  it('boolean expired test', async () => {
+    const record: Record<string, any> = {}
+    base.setData('isMale', true)
+    record['o'] = base.getData('isMale')
+    await expect(
+      new Promise(resolve => {
+        setTimeout(() => {
+          record['n'] = base.getData('isMale')
+          resolve(JSON.stringify(record))
+        }, 1000)
+      })
+    ).to.eventually.equal(JSON.stringify({ o: true, n: false }))
+  })
+  it('array expired test', async () => {
+    const record: Record<string, any> = {}
+    base.setData('hobbys', [1, 2])
+    record['o'] = base.getData('hobbys')
+    await expect(
+      new Promise(resolve => {
+        setTimeout(() => {
+          record['n'] = base.getData('hobbys')
+          resolve(JSON.stringify(record))
+        }, 1000)
+      })
+    ).to.eventually.equal(JSON.stringify({ o: [1, 2], n: [] }))
+  })
+  it('object expired test', async () => {
+    const record: Record<string, any> = {}
+    base.setData('props', { name: 'mod' })
+    record['o'] = base.getData('props')
+    await expect(
+      new Promise(resolve => {
+        setTimeout(() => {
+          record['n'] = base.getData('props')
+          resolve(JSON.stringify(record))
+        }, 1000)
+      })
+    ).to.eventually.equal(JSON.stringify({ o: { name: 'mod' }, n: {} }))
+  })
+  it('object expired test', async () => {
+    const record: Record<string, any> = {}
+    base.setData('method', (a: number, b: number) => a + b)
+    record['o'] = base.getData('method')(1, 3)
+    await expect(
+      new Promise(resolve => {
+        setTimeout(() => {
+          record['n'] = base.getData('method')(1, 3)
+          resolve(JSON.stringify(record))
+        }, 1000)
+      })
+    ).to.eventually.equal(JSON.stringify({ o: 4, n: 3 }))
   })
 })
