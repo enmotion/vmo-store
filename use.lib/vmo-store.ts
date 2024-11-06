@@ -72,13 +72,13 @@ export class VmoStore {
           JSON.parse(
             !T._cryptoKey
               ? T._storage.getItem(T._namespace, 'localStorage') ?? '{}'
-              : deCrypto(T._storage.getItem(T._namespace, 'localStorage') ?? '', T._cryptoKey)
+              : deCrypto(T._storage.getItem(T._namespace, 'localStorage') ?? '', T._cryptoKey) ?? '{}'
           ) ?? {}, // 获取 localStorage 中缓存的全部数据
         sessionStorage:
           JSON.parse(
             !T._cryptoKey
               ? T._storage.getItem(T._namespace, 'sessionStorage') ?? '{}'
-              : deCrypto(T._storage.getItem(T._namespace, 'sessionStorage') ?? '', T._cryptoKey)
+              : deCrypto(T._storage.getItem(T._namespace, 'sessionStorage') ?? '', T._cryptoKey) ?? '{}'
           ) ?? {} // 获取 localStorage 中缓存的全部数据
       }
       const result: Record<string, { v: any[]; t: number; k?: boolean }> = {}
@@ -355,6 +355,7 @@ export class VmoStore {
       ;(prop as string[]).forEach(key => {
         const type = this._props[key].storge ?? 'localStorage'
         delete this._data[key]
+        console.log(this._data, key, '1111')
         this._setCache(type)
       })
     }
