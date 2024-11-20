@@ -1,10 +1,5 @@
-import * as chai from 'chai'
+import { describe, it, expect} from "vitest"
 import { VmoStore } from '../../index' // 假设你的缓存库位于 src/lib/cache.ts
-import chaiAsPromised from 'chai-as-promised'
-
-chai.use(chaiAsPromised)
-const expect = chai.expect
-
 const base = new VmoStore({
   cryptoKey: 'esm', // 加密密钥
   namespace: 'enmo', // 命名空间
@@ -141,14 +136,15 @@ describe('VmoStore defaultValue', () => {
     expect(JSON.stringify(base.getData('props'))).to.equal(JSON.stringify({}))
   })
   it('function type should get 6', async () => {
-    console.log(localStorage.getItem(localStorage.key(0) as string), 'aaaaa')
+    // console.log(localStorage.getItem(localStorage.key(0) as string), 'aaaaa')
     function ss() {
       return new Promise(resolve => {
         setTimeout(() => {
           resolve(base.getData('method')(2, 3))
-        }, 0)
+        }, 1000)
       })
     }
-    await expect(ss()).to.eventually.equal(6)
+    const value =await ss();
+    expect(value).equal(6)
   })
 })

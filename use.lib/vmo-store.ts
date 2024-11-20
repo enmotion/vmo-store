@@ -2,7 +2,7 @@
  * @Author: enmotion
  * @Date: 2024-09-13 02:15:16
  * @Last Modified by: enmotion
- * @Last Modified time: 2024-10-17 10:18:26
+ * @Last Modified time: 2024-11-20 19:44:25
  */
 // import { ref, watch } from 'vue'
 import type { DataProps, BasicType, StoreParams, ExpireTime, StorageMethodProxy, CacheData, Capacity } from '@type'
@@ -34,7 +34,7 @@ export class VmoStore {
       this._namespace = `${config.prefix ?? 'VMO-STORE'}:${config.namespace ?? 'NORMAL'}:${
         parseInt(config.version as string) ?? 0
       }` // 命名空间 前缀名:命名空间:版本号, 版本号作为清理数据的标识
-      this._props = config.dataProps // 数据属性描述
+      this._props = this._shallowClone(config?.dataProps??{}) // 数据属性描述，需要浅拷贝避免污染
       this._storage = config.storage ?? defaultStorageMethodProxy
       this._data = this._getCache() // 缓存代理数据
       this.$store = this._createProxy(this._data) // 创建缓存数据代理
@@ -55,6 +55,18 @@ export class VmoStore {
         `The currently cached data volume exceeds the storage capacity limit, and the data has become invalid.`
       )
     }
+  }
+  /**
+   * 浅拷贝 prop 属性
+   * @param data 
+   * @returns 
+   */
+  private _shallowClone(prop:DataProps={}):DataProps{
+    const cloneInstance:DataProps={};
+    Object.keys(prop).forEach(key=>{
+      cloneInstance[key]=prop[key];
+    })
+    return cloneInstance
   }
   /**
    * 获取缓存呢数据
@@ -82,13 +94,12 @@ export class VmoStore {
           ) ?? {} // 获取 localStorage 中缓存的全部数据
       }
       const result: Record<string, { v: any[]; t: number; k?: boolean }> = {}
-      console.log(cache, 'cache')
       Object.keys(T._props).forEach(key => {
         result[key] = cache[T._props[key].storge ?? 'localStorage'][key]
       })
       return result
     } catch (err) {
-      console.warn(err)
+      // console.warn(err)
       return {}
     }
   }
@@ -100,10 +111,8 @@ export class VmoStore {
     const store = T._pick(keys, T._data)
     const dataString = !T._cryptoKey ? JSON.stringify(store) : enCrypto(JSON.stringify(store), T._cryptoKey)
     if (!T._capacity?.[type] || (T._capacity[type] as number) >= new Blob([dataString]).size) {
-      console.log(type, T._capacity?.[type], new Blob([dataString]).size, dataString)
       T._storage.setItem(T._namespace, dataString, type) // 将数据缓存入持久化
     } else {
-      console.log(type, T._capacity?.[type], new Blob([dataString]).size, dataString)
       throw new Error(
         `The storage capacity of memory [${type}] overflows, with a limit of [${
           T._capacity?.[type]
@@ -285,6 +294,10 @@ export class VmoStore {
   private _getTypes(type: BasicType | BasicType[]) {
     return type.constructor == Array ? type : [type]
   }
+  private _getTargetType(object:any){
+    const targetTypeOf = typeof object
+    return Array.isArray(object) ? 'array' : targetTypeOf;
+  }
   /**
    * 缓存回收 除自身 命名空间 外
    * @param type // all: 所有缓存, self:仅仅 相同命名空间，但是版本不同的回收
@@ -339,7 +352,9 @@ export class VmoStore {
   }
 
   public updateProp(props: DataProps) {
-    this._props = Object.assign(this._props, props)
+    Object.keys(props).forEach(key=>{
+      this._props[key] = props[key]
+    })
   }
   /**
    * 清除数据
@@ -355,7 +370,6 @@ export class VmoStore {
       ;(prop as string[]).forEach(key => {
         const type = this._props[key].storge ?? 'localStorage'
         delete this._data[key]
-        console.log(this._data, key, '1111')
         this._setCache(type)
       })
     }

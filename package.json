@@ -1,6 +1,6 @@
 {
   "name": "vmo-store",
-  "version": "0.0.0-beta.3",
+  "version": "0.0.0-beta.4",
   "type": "module",
   "private": false,
   "description": "storage proxy",
@@ -19,6 +19,7 @@
     "dist"
   ],
   "scripts": {
+    "coverage": "vitest run --coverage",
     "test": "vitest",
     "dev": "vite",
     "build": "vue-tsc && vite build",
@@ -33,6 +34,7 @@
     "@types/mocha": "^10.0.9",
     "@types/node": "^20.17.6",
     "@vitejs/plugin-vue": "^4.6.2",
+    "@vitest/coverage-v8": "^2.1.4",
     "@vitest/ui": "^2.1.4",
     "autoprefixer": "^10.4.16",
     "chai": "^5.1.2",

@@ -13,12 +13,12 @@ export default defineConfig({
     port: 1980
   },
   test: {
-    globals: true,
     environment: 'jsdom',
-    include: [`${srcDir}/**/*.test.ts`] // 使用绝对路径
-    // coverage: {
-    //   reporter: ['text', 'json', 'html']
-    // }
+    coverage: {
+      include: ['**/use.lib'],
+      provider: 'v8',
+      reportsDirectory: './test/reports/unit/coverage'
+    }
   },
   build: {
     // Vite 模块打包模式 配置
