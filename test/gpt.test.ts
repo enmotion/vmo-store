@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { VmoStore, defaultStorageMethodProxy } from '../../index'
-import type { StoreParams } from '../../index'
+import { VmoStore, defaultStorageMethodProxy } from '../index'
+import type { StoreParams } from '../index'
 
 describe('VmoStore GPT',()=>{
   let store: VmoStore

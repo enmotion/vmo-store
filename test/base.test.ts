@@ -1,5 +1,5 @@
 import { describe, it, expect} from "vitest"
-import { VmoStore } from '../../index' // 假设你的缓存库位于 src/lib/cache.ts
+import { VmoStore } from '../index' // 假设你的缓存库位于 src/lib/cache.ts
 const base = new VmoStore({
   cryptoKey: 'esm', // 加密密钥
   namespace: 'enmo', // 命名空间

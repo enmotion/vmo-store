@@ -2,7 +2,7 @@
  * @Author: enmotion
  * @Date: 2024-09-13 02:15:16
  * @Last Modified by: enmotion
- * @Last Modified time: 2024-11-20 19:44:25
+ * @Last Modified time: 2024-11-20 20:06:55
  */
 // import { ref, watch } from 'vue'
 import type { DataProps, BasicType, StoreParams, ExpireTime, StorageMethodProxy, CacheData, Capacity } from '@type'
@@ -294,10 +294,15 @@ export class VmoStore {
   private _getTypes(type: BasicType | BasicType[]) {
     return type.constructor == Array ? type : [type]
   }
-  private _getTargetType(object:any){
-    const targetTypeOf = typeof object
-    return Array.isArray(object) ? 'array' : targetTypeOf;
-  }
+  /**
+   * 
+   * @param object 
+   * @returns 
+   */
+  // private _getTargetType(object:any){
+  //   const targetTypeOf = typeof object
+  //   return Array.isArray(object) ? 'array' : targetTypeOf;
+  // }
   /**
    * 缓存回收 除自身 命名空间 外
    * @param type // all: 所有缓存, self:仅仅 相同命名空间，但是版本不同的回收
