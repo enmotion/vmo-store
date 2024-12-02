@@ -1,81 +1,81 @@
 # VmoStore
 
-`VmoStore` 是一个本地缓存管理类，用于在浏览器环境中方便地管理、存储和检索数据。它设计为具有版本控制、命名空间隔离和可配置的存储容量限制功能，使其适用于各种缓存场景。
+`VmoStore` is a local cache management class designed for convenient data management, storage, and retrieval in a browser environment. It is engineered to include version control, namespace isolation, and configurable storage capacity limits, making it suitable for various caching scenarios.
 
-## 特性
+## Features
 
-- 支持多种数据类型的缓存。
-- 配置化的数据结构说明和过期时间。
-- 存储命名空间和版本管理。
-- 支持数据加密（可选）。
-- 基于容量限制的存储管理和缓存清理。
+- Supports caching of multiple data types.
+- Configurable data structure specifications and expiration times.
+- Storage namespaces and version management.
+- Optional data encryption support.
+- Capacity-limited storage management and cache cleaning.
 
-## 安装
+## Installation
 
 ```javascript
 npm i vmo-store
 ```
 
-## 使用说明
+## Usage Instructions
 
-#### 创建实例
+#### Create Instance
 
 ```javascript
 const vmoStore = new VmoStore({
-  namespace: 'myApp', // 命名空间
-  prefix: 'APP', // 前置别名
-  version: 1, // 版本
-  cryptoKey: 'yourCryptoKeyHere', // 加密KEY,如果为空，则不会启用缓存加密能力
+  namespace: 'myApp', // Namespace
+  prefix: 'APP', // Prefix alias
+  version: 1, // Version
+  cryptoKey: 'yourCryptoKeyHere', // Encryption key. If empty, cache encryption will not be enabled
   dataProps: {
     user: {
-      type: String, // 数据类型 支持多类型[String,Array,Number]
-      storge: 'localStorage', // 指定 localStorage
-      default: '111', // 默认值
-      expireTime: '1d' // 过期时间 1天,
+      type: String, // Data type supports multiple types [String, Array, Number]
+      storge: 'localStorage', // Specify localStorage
+      default: '111', // Default value
+      expireTime: '1d' // Expiration time of 1 day,
       /**
-       * 过期时间可以设置为3种
-       * 1. 数值，以毫秒为加时方式，以写入或者更新是时间为起点值+expireTime
-       * 2. 类型字符 s秒,m分,h时,d天 先转换为毫秒数值，再1写入或者更新是时间为起点值+expireTime
-       * 2. 固定日期格式 "YYYY-MM-DD HH:mm:ss" 定期过期方式
+       * Expiration time can be set in 3 ways:
+       * 1. Numeric value: In milliseconds added from the time of writing or updating + expireTime
+       * 2. Character type: s for seconds, m for minutes, h for hours, d for days; converted to milliseconds before adding from the time of writing or updating + expireTime
+       * 3. Fixed date format "YYYY-MM-DD HH:mm:ss" for fixed expiration
        */
     },
     settings: {
-      type: [Object, Array], // 数据类型
-      default: () => ({}), // 引用型默认值,请都采用函数返回形式
-      storge: 'sessionStorage' // 指定 sessionStorage 缓存器
+      type: [Object, Array], // Data type
+      default: () => ({}), // For reference types, use a function form to return the default value
+      storge: 'sessionStorage' // Specify sessionStorage as the cache
     }
-  }, // 存储数据声明
+  }, // Store data declaration
   capacity: {
-    localStorage: 5000, // localStorage 存储上限
-    sessionStorage: 3000 // sessionStorage 存储上限
+    localStorage: 5000, // LocalStorage limit
+    sessionStorage: 3000 // SessionStorage limit
   },
-  cacheInitCleanupMode: 'self' // 初始化时清理缓存, 可选 'all':清楚除自身外所有缓存数据 或 'self':仅清除除自身版本外，相同命名空间与前置别名的缓存的
+  cacheInitCleanupMode: 'self' // Cache cleanup mode on initialization, options are 'all': clear all except self or 'self': clear only caches with the same namespace and prefix alias except for different versions
 })
 ```
 
-#### 设置数据
+#### Set Data
 
 ```javascript
 vmoStore.setData('user', 'John Doe')
 ```
 
-#### 获取数据
+#### Get Data
 
 ```javascript
 const user = vmoStore.getData('user')
 ```
 
-#### 清理数据
+#### Clear Data
 
 ```javascript
-// 按属性清空数据
+// Clear data by property
 vmoStore.clearData('user')
 
-// 清理所有缓存数据
+// Clear all cache data
 vmoStore.clear('localStorage')
 ```
 
-#### 更新属性定义
+#### Update Property Definition
 
 ```javascript
 vmoStore.updateProp({
@@ -83,52 +83,52 @@ vmoStore.updateProp({
 })
 ```
 
-#### 获取缓存属性
+#### Get Cache Properties
 
 ```javascript
 const props = vmoStore.getProps()
 ```
 
-#### 获取命名空间
+#### Get Namespace
 
 ```javascript
 const namespace = vmoStore.getNameSpace()
 ```
 
-#### 获取存储容量
+#### Storage Capacity
 
 ```javascript
 const capacity = vmoStore.getCapacity()
 ```
 
-### 方法详解
+### Method Details
 
-- constructor(config: StoreParams): 初始化 `VmoStore` 实例。config 对象用于配置命名空间、版本、加密密钥、数据属性、存储容量和缓存清理模式。
+- constructor(config: StoreParams): Initializes a `VmoStore` instance. The config object is used to configure namespace, version, encryption key, data properties, storage capacities, and cache cleaning mode.
 
-- setData(prop: string, value: any): 设置缓存数据。
+- setData(prop: string, value: any): Sets cache data.
 
-- getData(prop: string): 获取缓存数据。
+- getData(prop: string): Retrieves cache data.
 
-- clear(type?: 'localStorage' | 'sessionStorage'): 清理指定类型的存储，若不指定清理所有存储。
+- clear(type?: ‘localStorage’ | ‘sessionStorage’): Clears the specified type of storage; if unspecified, clears all storage.
 
-- clearData(prop: string | string[]): 清理指定缓存数据。
+- clearData(prop: string | string[]): Clears specified cache data.
 
-- removeProp(prop: string | string[]): 移除缓存声明和数据。
+- removeProp(prop: string | string[]): Removes cache declaration and data.
 
-- updateProp(props: DataProps): 更新缓存属性说明。
+- updateProp(props: DataProps): Updates cache property definitions.
 
-- getCapacity(): 获取当前的存储容量使用情况和限制。
+- getCapacity(): Gets current storage capacity usage and limits.
 
-- getProps(key?: string): 获取缓存属性定义。
+- getProps(key?: string): Retrieves cache property definitions.
 
-- getNameSpace(): 获取命名空间定义。
+- getNameSpace(): Retrieves namespace definition.
 
-### 错误处理
+### Error Handling
 
-`VmoStore` 在一些场景下可能会抛出错误，例如：存储容量超过限制，属性类型不匹配等。请确保在数据量较大时配置足够的允许存储空间。
+`VmoStore` may throw errors in certain scenarios, such as when storage capacity is exceeded or property types mismatch. Ensure sufficient storage space is configured for large data volumes.
 
-### 注意事项
+### Notes
 
-- 若使用数据加密，请确保加密密钥的长度符合要求，并注意保密。
-- 当设定了存储容量限制时，数据写入可能会因为超出限制而抛出错误。
-- 在使用 eval 时请确保数据来源的安全性，以免导致安全漏洞。
+- If using data encryption, ensure the encryption key length is adequate and keep it secure.
+- When storage capacity limits are set, data writing might fail due to exceeding limits.
+- Ensure data source security when using eval to avoid security vulnerabilities.
