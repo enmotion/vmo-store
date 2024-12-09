@@ -47,13 +47,12 @@ export class VmoStore<T extends Record<string,any>> {
       config.cacheInitCleanupMode && this.clearUnusedCache(config.cacheInitCleanupMode)
       this._setCache('localStorage')
       this._setCache('sessionStorage')
-    } catch (err) {
-      this._data = {} as CacheData<T>
-      this._setCache('localStorage')
-      this._setCache('sessionStorage')
-      throw new Error(
-        `The currently cached data volume exceeds the storage capacity limit, and the data has become invalid.`
-      )
+    } catch (err:any) {
+      console.log(err?.message)
+      // this._data = {} as CacheData<T>
+      // this._setCache('localStorage')
+      // this._setCache('sessionStorage')
+      throw new Error( err?.message ?? `VmoStore:Initialization parameter error`)
     }
   }
   /**
@@ -213,7 +212,8 @@ export class VmoStore<T extends Record<string,any>> {
               )
             }
           } else {
-            throw new Error('当前附值，并未声明')
+            console.error(`VmoStore: Current assignment [${prop}] has not been declared.`)
+            return false
           }
         } catch (err) {
           throw err as Error
