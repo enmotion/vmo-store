@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { VmoStore } from '../index'
 
-const cache = new VmoStore({
+const cache = new VmoStore<Record<string,any>>({
   cryptoKey: 'esm', // 加密密钥
   namespace: 'enmo', // 命名空间
   version: 1, // 存储版本
@@ -71,6 +71,8 @@ async function a() {
   const ss = await cache.$store.user(8, 8)
   console.log(ss)
 }
+cache.getData('name')
+cache.setData('age',12)
 a()
 // console.log( cache.$store.user(2, 1), '1') // [1233]
 try {

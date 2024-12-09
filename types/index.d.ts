@@ -12,7 +12,7 @@ export type BasicType =
   | SetConstructor
   | AsyncGenerator
 
-export type CacheData = Record<string, { v: any[]; t: number; k?: boolean }>
+export type CacheData<T extends Record<string,any>> = Partial<Record<keyof T, { v: any[]; t: number; k?: boolean }>>
 export type StorageMethodProxy = {
   setItem: { (key: string, value: any, type?: 'localStorage' | 'sessionStorage'): any }
   getItem: { (key: string, type?: 'localStorage' | 'sessionStorage'): string | null }

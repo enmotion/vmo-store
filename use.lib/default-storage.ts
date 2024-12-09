@@ -31,7 +31,7 @@ export const defaultStorageMethodProxy: StorageMethodProxy = {
       const length: number = storage.length
       const keys: string[] = []
       for (let i = 0; i < length; i++) {
-        keys[i] = storage[i]
+        keys[i] = storage.key(i) as string
       }
       return keys
     } else {

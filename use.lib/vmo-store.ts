@@ -16,14 +16,14 @@ const AsyncFunc = async function () {}.constructor
  * VmoStore:Class
  * 本地缓存管理类
  */
-export class VmoStore {
+export class VmoStore<T extends Record<string,any>> {
   private _cryptoKey: string | undefined // 加密 KEY任意字符
   private _namespace: `${string}:${string}:${number}` // 命名空间
   private _props: DataProps // 缓存数据 元信息描述
-  private _data: CacheData // 热数据 v:数组格式保存的数据,t:存储时间, k:是否要经过 eval 转化
+  private _data: CacheData<T> // 热数据 v:数组格式保存的数据,t:存储时间, k:是否要经过 eval 转化
   private _storage: StorageMethodProxy // 存储层方法，可替换存储层，以适应不同的 前端环境
   private _capacity: Capacity // 容量
-  public $store: Record<string, any>
+  public $store: T
   /**
    * constructor:Function 构造函数
    * @param config <StoreParams>
@@ -48,7 +48,7 @@ export class VmoStore {
       this._setCache('localStorage')
       this._setCache('sessionStorage')
     } catch (err) {
-      this._data = {}
+      this._data = {} as CacheData<T>
       this._setCache('localStorage')
       this._setCache('sessionStorage')
       throw new Error(
@@ -97,7 +97,7 @@ export class VmoStore {
       Object.keys(T._props).forEach(key => {
         result[key] = cache[T._props[key].storge ?? 'localStorage'][key]
       })
-      return result
+      return result as Partial<CacheData<T>>
     } catch (err) {
       // console.warn(err)
       return {}
@@ -127,7 +127,7 @@ export class VmoStore {
    * @param target // 代理目标
    * @returns
    */
-  private _createProxy(target: Record<string, any>) {
+  private _createProxy(target: Record<string, any>):T {
     const T = this // 固定指针
     const proxyHandler: ProxyHandler<Record<string, any>> = {
       /**
@@ -221,7 +221,7 @@ export class VmoStore {
       }
     }
     const proxy = new Proxy(target, proxyHandler)
-    return proxy
+    return proxy as T
   }
   /**
    * pick 方法
@@ -248,7 +248,7 @@ export class VmoStore {
   private _getExpiredTime(prop: string, time: ExpireTime = Date.now() + 1000): number {
     const T = this
     if (time.constructor == Number) {
-      return T._data[prop]?.t + Math.abs(time)
+      return (T._data[prop]?.t ?? 0) + Math.abs(time)
     }
     const regex = /^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2}){0,1}$/g
     if (regex.test(time as string)) {
@@ -262,7 +262,7 @@ export class VmoStore {
         h: 1000 * 60 * 60,
         d: 1000 * 60 * 60 * 24
       }[['s', 'm', 'h', 'd'].filter(item => (time as string).includes(item))[0]]
-      return T._data[prop]?.t + parseFloat(time as string) * (unit ?? 0)
+      return (T._data[prop]?.t ?? 0) + parseFloat(time as string) * (unit ?? 0)
     }
     throw new Error(
       `The expirationTime setting for property [${prop}] is incorrect; Expected a Number type, or a string of the format [number]d, [number]m, [number]y, or YYYY-MM-DD HH:mm:ss.`
@@ -349,10 +349,10 @@ export class VmoStore {
    * @param prop
    * @returns
    */
-  public getData(prop: string) {
+  public getData<K extends keyof T>(prop: K):T[K] {
     return this.$store[prop]
   }
-  public setData(prop: string, value: any) {
+  public setData<K extends keyof T>(prop: K, value: T[K]) {
     return (this.$store[prop] = value)
   }
 
