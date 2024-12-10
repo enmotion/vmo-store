@@ -47,12 +47,8 @@ export class VmoStore<T extends Record<string,any>> {
       config.cacheInitCleanupMode && this.clearUnusedCache(config.cacheInitCleanupMode)
       this._setCache('localStorage')
       this._setCache('sessionStorage')
-    } catch (err:any) {
-      console.log(err?.message)
-      // this._data = {} as CacheData<T>
-      // this._setCache('localStorage')
-      // this._setCache('sessionStorage')
-      throw new Error( err?.message ?? `VmoStore:Initialization parameter error`)
+    } catch (err) {
+      throw new Error( (err as Error)?.toString() ?? `VmoStore:Initialization parameter error`)
     }
   }
   /**
@@ -168,10 +164,11 @@ export class VmoStore<T extends Record<string,any>> {
               : T._getDefaultValue(T._props[prop]?.default)
           } else {
             // 不存在:直接返回 undefined
-            return undefined
+            throw new Error(`VmoStore: The property [${prop}] being accessed does not exist.`)
           }
         } catch (err) {
-          console.error(err)
+          console.warn(err)
+          return undefined
         }
       },
       /**
@@ -212,8 +209,7 @@ export class VmoStore<T extends Record<string,any>> {
               )
             }
           } else {
-            console.error(`VmoStore: Current assignment [${prop}] has not been declared.`)
-            return false
+            throw new Error(`VmoStore: Current assignment [${prop}] has not been declared.`)
           }
         } catch (err) {
           throw err as Error

@@ -53,7 +53,7 @@ const vmoStore = new VmoStore({
 })
 ```
 `TypeScript` 
-```typescript
+```javascript
 const vmoStore = new VmoStore<{user:string,settings:Record<string,any>|any[]}>({
    namespace: 'myApp', // Namespace
   prefix: 'APP', // Prefix alias
@@ -85,6 +85,7 @@ const vmoStore = new VmoStore<{user:string,settings:Record<string,any>|any[]}>({
   cacheInitCleanupMode: 'self' // Cache cleanup mode on initialization, options are 'all': clear all except self or 'self': clear only caches with the same namespace and prefix alias except for different versions
 })
 ```
+
 #### Set Data
 
 ```javascript

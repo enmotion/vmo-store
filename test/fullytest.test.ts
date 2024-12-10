@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { VmoStore } from '../index'
-import { enCrypto, deCrypto } from '../use.lib/crypto-key'
+import { VmoStore, StoreParams } from '../index'
 import { defaultStorageMethodProxy } from '../index'
 
 // 模拟加密和解密函数
@@ -44,7 +43,7 @@ vi.mock('./default-storage', () => ({
 
 describe('VmoStore', () => {
   let store: VmoStore<Record<string, any>>
-  const config = {
+  const config:StoreParams = {
     prefix: 'VMO-STORE',
     namespace: 'NORMAL',
     version: '1',
@@ -72,9 +71,13 @@ describe('VmoStore', () => {
   })
 
   it('should initialize correctly', () => {
+    // @ts-ignore
     expect(store._cryptoKey).toBe('1234567812345678')
+    // @ts-ignore
     expect(store._namespace).toBe('VMO-STORE:NORMAL:1')
+    // @ts-ignore
     expect(store._props).toEqual(config.dataProps)
+    // @ts-ignore
     expect(store._data).toEqual({})
     expect(store.$store).toEqual({})
   })
@@ -200,12 +203,15 @@ describe('VmoStore', () => {
 
     store.removeProp('name')
     expect(store.$store.name).toBeUndefined()
+    // @ts-ignore
     expect(store._props.name).toBeUndefined()
 
     store.removeProp(['age', 'isValid'])
     expect(store.$store.age).toBeUndefined()
+    // @ts-ignore
     expect(store._props.age).toBeUndefined()
     expect(store.$store.isValid).toBeUndefined()
+    // @ts-ignore
     expect(store._props.isValid).toBeUndefined()
   })
 
@@ -240,6 +246,7 @@ describe('VmoStore', () => {
 
   it('should throw error when init', async () => {
     expect(() => {
+      // @ts-ignore
       new VmoStore()
     }).toThrowError("Cannot read properties of undefined (reading 'cryptoKey')")
   })
@@ -252,6 +259,7 @@ describe('VmoStore', () => {
         cryptoKey: 'fdsfsdfffsdas',
         dataProps: {
           name: { type: String, storge: 'localStorage', expireTime: '1d' },
+          // @ts-ignore
           age: { type: Number, storge: 'sessionStorage', expireTime: '1o' },
           isActive: { type: Boolean, storge: 'localStorage', default: false },
           fetchData: { type: Function, storge: 'sessionStorage', expireTime: '1m' },
@@ -263,7 +271,14 @@ describe('VmoStore', () => {
     }).toThrowError('The expirationTime setting for property [age] is incorrect; Expected a Number type, or a string of the format [number]d, [number]m, [number]y, or YYYY-MM-DD HH:mm:ss.')
   })
   
-  // it('should throw error with undeclared prop', async () => {
-  //   expect(store.$store.fetchDatas = () => { return 'data' }).toThrowError("'set' on proxy: trap returned falsish for property 'fetchDatas'")
-  // })
+  it('should throw error with undeclared prop', async () => {
+    try{
+      store.$store.fetchDatas = () => { return 'data' }
+    }catch(err:any){
+      console.log(err.toString(),'11111')
+    }
+    expect(()=>{
+      store.$store.fetchDatas = () => { return 'data' }
+    }).toThrow("VmoStore: Current assignment [fetchDatas] has not been declared.")
+  })
 })

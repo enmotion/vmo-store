@@ -39,6 +39,7 @@
     "src/**/*.tsx",
     "src/**/*.vue",
     "types/**/*.ts",
+    "test/**/*.ts",
     "use.lib/**/*.ts",
     "components/**/*.ts",
     "components/**/*.tsx",

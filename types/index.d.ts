@@ -31,6 +31,7 @@ export type ExpireTime =
   | `${number}h`
   | `${number}d`
   | `${number}-${number}-${number} ${number}:${number}:${number}`
+  | `${number}-${number}-${number}`
 
 export type DataProps = Record<
   string,

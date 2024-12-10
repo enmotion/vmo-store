@@ -3,7 +3,7 @@ import { VmoStore, defaultStorageMethodProxy } from '../index'
 import type { StoreParams } from '../index'
 
 describe('VmoStore GPT',()=>{
-  let store: VmoStore
+  let store: VmoStore<{key1:string,key2:number,key3:Function}>
   const config: StoreParams = {
     cryptoKey: '1234567890123456',
     namespace: 'TEST-NAMESPACE',
@@ -221,10 +221,12 @@ describe('VmoStore GPT',()=>{
   it('should correctly handle default values', () => {
     store = new VmoStore(config)
     // console.log(JSON.stringify(config),33333)
+    // @ts-ignore
     expect(store.getData('key4')).toBeUndefined()
     store.updateProp({
       key4: { type: String, default: 'default4', storge: 'localStorage', expireTime: '1m' }
     })
+    // @ts-ignore
     expect(store.getData('key4')).toBe('default4')
   })
   it('should correctly handle function types', () => {
@@ -236,6 +238,7 @@ describe('VmoStore GPT',()=>{
   it('should correctly handle type constraints', () => {
     store = new VmoStore(config)
     expect(() => {
+      // @ts-ignore
       store.setData('key1', 12345)
     }).toThrow('VmoStore: Property [key1] expects a type of [String], but the actual obtained type is Number.')
   })
@@ -248,7 +251,7 @@ describe('VmoStore GPT',()=>{
     })
     store.setData('key1', 'value1')
     expect(store.getData('key1')).toBe('value1')
-
+    // @ts-ignore
     store.setData('key1', 12345)
     expect(store.getData('key1')).toBe(12345)
   })

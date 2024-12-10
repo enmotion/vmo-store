@@ -52,6 +52,40 @@ const vmoStore = new VmoStore({
   cacheInitCleanupMode: 'self' // 初始化时清理缓存, 可选 'all':清楚除自身外所有缓存数据 或 'self':仅清除除自身版本外，相同命名空间与前置别名的缓存的
 })
 ```
+`TypeScript` 强约束模式
+```javascript
+const vmoStore = new VmoStore<{user:string,settings:Record<string,any>|any[]}>({
+  namespace: 'myApp', // 命名空间
+  prefix: 'APP', // 前置别名
+  version: 1, // 版本
+  cryptoKey: 'yourCryptoKeyHere', // 加密KEY,如果为空，则不会启用缓存加密能力
+  dataProps: {
+    user: {
+      type: String, // 数据类型 支持多类型[String,Array,Number]
+      storge: 'localStorage', // 指定 localStorage
+      default: '111', // 默认值
+      expireTime: '1d' // 过期时间 1天,
+      /**
+       * 过期时间可以设置为3种
+       * 1. 数值，以毫秒为加时方式，以写入或者更新是时间为起点值+expireTime
+       * 2. 类型字符 s秒,m分,h时,d天 先转换为毫秒数值，再1写入或者更新是时间为起点值+expireTime
+       * 2. 固定日期格式 "YYYY-MM-DD HH:mm:ss" 定期过期方式
+       */
+    },
+    settings: {
+      type: [Object, Array], // 数据类型
+      default: () => ({}), // 引用型默认值,请都采用函数返回形式
+      storge: 'sessionStorage' // 指定 sessionStorage 缓存器
+    }
+  }, // 存储数据声明
+  capacity: {
+    localStorage: 5000, // localStorage 存储上限
+    sessionStorage: 3000 // sessionStorage 存储上限
+  },
+  cacheInitCleanupMode: 'self' // 初始化时清理缓存, 可选 'all':清楚除自身外所有缓存数据 或 'self':仅清除除自身版本外，相同命名空间与前置别名的缓存的
+})
+
+```
 
 #### 设置数据
 
