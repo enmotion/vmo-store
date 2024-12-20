@@ -47,6 +47,15 @@ const cache = new VmoStore<Record<string,any>>({
   //   }
   // },
   dataProps: {
+    info:{
+      type:Object,
+      default:()=>({
+        people:{
+          name:'s'
+        }
+      }),
+      storge:'sessionStorage'
+    },
     pluss: {
       type: [Function], // 类型约束
       default: () => (a: number, b: number) => a + b, // 默认值，类 vue props
@@ -67,12 +76,14 @@ const cache = new VmoStore<Record<string,any>>({
     }
   }
 })
-async function a() {
-  const ss = await cache.$store.user(8, 8)
+function a() {
+  const ss = cache.$store.user(8, 8)
   console.log(ss)
 }
-cache.getData('name')
 cache.setData('age',12)
+console.log(cache.getData('info'))
+cache.$store.info.people.name = 111
+console.log(cache.getData('info'))
 a()
 // console.log( cache.$store.user(2, 1), '1') // [1233]
 try {
@@ -100,6 +111,8 @@ try {
 // }, 3000)
 // const W: any = window
 // W.cache = cache
+
+
 </script>
 
 <template>

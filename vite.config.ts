@@ -17,7 +17,8 @@ export default defineConfig({
     coverage: {
       include: ['**/use.lib'],
       provider: 'v8',
-      reportsDirectory: './test/reports/unit/coverage'
+      reportsDirectory: './test/reports/unit/coverage',
+      exclude:['use.lib/need-rethink.ts','dist']
     }
   },
   build: {
