@@ -1,4 +1,4 @@
-import { describe, it, expect} from "vitest"
+import { describe, it, expect, beforeEach, afterEach, vi} from "vitest"
 import { VmoStore } from '../index' // 假设你的缓存库位于 src/lib/cache.ts
 
 const base = new VmoStore({
@@ -47,82 +47,33 @@ const base = new VmoStore({
   }
 })
 describe('VmoStore data Expired test', () => {
-  it('string expired test', async () => {
-    base.setData('name', 'mod')
-    expect(base.$store.name).toBe('mod')
-    function delay(){
-      return new Promise((resolve,reject)=>{
-        setTimeout(() => {
-          resolve(base.getData('name'))
-        }, 1000)
-      })
-    }
-    const timeoutValue = await delay();
-    expect(timeoutValue).toBe('default=name==')
-  })
-  it('number expired test', async () => {
-    base.setData('age', 2)
-    expect(base.$store.age).toBe(2)
-    function delay(){
-      return new Promise((resolve,reject)=>{
-        setTimeout(() => {
-          resolve(base.getData('age'))
-        }, 1000)
-      })
-    }
-    const timeoutValue = await delay();
-    expect(timeoutValue).toBe(1)
-  })
-  it('boolean expired test', async () => {
-    base.setData('isMale', true)
-    expect(base.$store.isMale).toBe(true)
-    function delay(){
-      return new Promise((resolve,reject)=>{
-        setTimeout(() => {
-          resolve(base.getData('isMale'))
-        }, 1000)
-      })
-    }
-    const timeoutValue = await delay();
-    expect(timeoutValue).toBe(false)
-  })
-  it('array expired test', async () => {
-    base.setData('hobbys',  [1, 2])
-    expect(base.$store.hobbys).toEqual([1,2])
-    function delay(){
-      return new Promise((resolve,reject)=>{
-        setTimeout(() => {
-          resolve(base.getData('hobbys'))
-        }, 1000)
-      })
-    }
-    const timeoutValue = await delay();
-    expect(timeoutValue).toEqual([])
-  })
-  it('object expired test', async () => {
-    base.setData('props',  { name: 'mod' })
-    expect(base.$store.props).toEqual({ name: 'mod' })
-    function delay(){
-      return new Promise((resolve,reject)=>{
-        setTimeout(() => {
-          resolve(base.getData('props'))
-        }, 1000)
-      })
-    }
-    const timeoutValue = await delay();
-    expect(timeoutValue).toEqual({})
-  })
-  it('function expired test', async () => {
-    base.setData('method',  (a: number, b: number) => a + b)
-    expect(base.$store.method(1,3)).toEqual(4)
-    function delay(){
-      return new Promise((resolve,reject)=>{
-        setTimeout(() => {
-          resolve(base.getData('method')(1,3))
-        }, 1000)
-      })
-    }
-    const timeoutValue = await delay();
-    expect(timeoutValue).toEqual(3)
-  })
-})
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it.each([
+    ['name', 'mod', 'default=name=='],
+    ['age', 2, 1],
+    ['isMale', true, false],
+    ['hobbys', [1, 2], []],
+    ['props', { name: 'mod' }, {}],
+  ] as const)('%s expires at the exact TTL boundary', (key, value, fallback) => {
+    base.setData(key, value);
+    expect(base.getData(key)).toEqual(value);
+    vi.advanceTimersByTime(999);
+    expect(base.getData(key)).toEqual(value);
+    vi.advanceTimersByTime(1);
+    expect(base.getData(key)).toEqual(fallback);
+  });
+
+  it('function expires at the exact TTL boundary', () => {
+    base.setData('method', (a: number, b: number) => a + b);
+    expect(base.getData('method')(1, 3)).toBe(4);
+    vi.advanceTimersByTime(999);
+    expect(base.getData('method')(1, 3)).toBe(4);
+    vi.advanceTimersByTime(1);
+    expect(base.getData('method')(1, 3)).toBe(3);
+  });
+});

@@ -32,3 +32,5 @@ test/reports/browser/
 test-results/
 
 docs/.vitepress/.temp/
+
+.playwright-mcp/
