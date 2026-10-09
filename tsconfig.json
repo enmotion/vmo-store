@@ -21,16 +21,15 @@
     "noFallthroughCasesInSwitch": true,
 
     /* alias 配置 */
-    "baseUrl": "./", // 必须配置 baseUrl
     "paths": {
-      "@src": ["src"], // 必须如此配置才能在ts中沿用 vite 的 alias 配置
-      "@src/*": ["src/*"], // 两个都需要....
-      "@type": ["types"], // 必须如此配置才能在ts中沿用 vite 的 alias 配置
-      "@type/*": ["types/*"], // 两个都需要....
-      "@comps": ["components"], // 必须如此配置才能在ts中沿用 vite 的 alias 配置
-      "@comps/*": ["components/*"], // 两个都需要....
-      "@lib": ["use.lib"], // 必须如此配置才能在ts中沿用 vite 的 alias 配置
-      "@lib/*": ["use.lib/*"] // 两个都需要....
+      "@src": ["./src"],
+      "@src/*": ["./src/*"],
+      "@type": ["./types"],
+      "@type/*": ["./types/*"],
+      "@comps": ["./components"],
+      "@comps/*": ["./components/*"],
+      "@lib": ["./use.lib"],
+      "@lib/*": ["./use.lib/*"]
     }
   },
   "include": [
