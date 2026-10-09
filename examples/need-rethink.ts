@@ -1,4 +1,4 @@
-function createReactiveProxy(data:Record<string,any>, path:string[] = []) {
+function createReactiveProxy(data:Record<string,any>, path:string[] = []): Record<string, any> {
   return new Proxy(data, {
     get(target, key, receiver) {
       const fullPath = path.concat(key as string);

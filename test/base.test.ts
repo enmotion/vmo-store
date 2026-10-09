@@ -113,7 +113,6 @@ describe('VmoStore Base', () => {
   })
   it('function type should set and get a value', () => {
     base.setData('method', (a: number, b: number) => a * b - a)
-    console.log(localStorage.getItem(localStorage.key(0) as string), 'ccc')
     expect(base.getData('method')(2, 3)).to.equal(4)
   })
 })

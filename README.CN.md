@@ -1,168 +1,75 @@
 # VmoStore
 
-`VmoStore` 是一个本地缓存管理类，用于在浏览器环境中方便地管理、存储和检索数据。它设计为具有版本控制、命名空间隔离和可配置的存储容量限制功能，使其适用于各种缓存场景。
+一个独立于框架的同步浏览器缓存工具，支持 localStorage/sessionStorage、命名空间、版本隔离、类型约束、默认值、过期时间和容量限制。
 
-## 特性
+## 使用
 
-- 支持多种数据类型的缓存。
-- 配置化的数据结构说明和过期时间。
-- 存储命名空间和版本管理。
-- 支持数据加密（可选）。
-- 基于容量限制的存储管理和缓存清理。
-
-## 安装
-
-```javascript
-npm i vmo-store
+```sh
+npm install vmo-store
 ```
 
-## 使用说明
+```ts
+import { VmoStore } from 'vmo-store'
 
-#### 创建实例
-
-```javascript
-const vmoStore = new VmoStore({
-  namespace: 'myApp', // 命名空间
-  prefix: 'APP', // 前置别名
-  version: 1, // 版本
-  cryptoKey: 'yourCryptoKeyHere', // 加密KEY,如果为空，则不会启用缓存加密能力
+const cache = new VmoStore<{ user: string; settings: Record<string, unknown> }>({
+  prefix: 'APP',
+  namespace: 'myApp',
+  version: 1,
   dataProps: {
-    user: {
-      type: String, // 数据类型 支持多类型[String,Array,Number]
-      storge: 'localStorage', // 指定 localStorage
-      default: '111', // 默认值
-      expireTime: '1d' // 过期时间 1天,
-      /**
-       * 过期时间可以设置为3种
-       * 1. 数值，以毫秒为加时方式，以写入或者更新是时间为起点值+expireTime
-       * 2. 类型字符 s秒,m分,h时,d天 先转换为毫秒数值，再1写入或者更新是时间为起点值+expireTime
-       * 2. 固定日期格式 "YYYY-MM-DD HH:mm:ss" 定期过期方式
-       */
-    },
-    settings: {
-      type: [Object, Array], // 数据类型
-      default: () => ({}), // 引用型默认值,请都采用函数返回形式
-      storge: 'sessionStorage' // 指定 sessionStorage 缓存器
-    }
-  }, // 存储数据声明
-  capacity: {
-    localStorage: 5000, // localStorage 存储上限
-    sessionStorage: 3000 // sessionStorage 存储上限
+    user: { type: String, default: 'guest', expireTime: '1d' },
+    settings: { type: Object, default: () => ({}), storge: 'sessionStorage' }
   },
-  cacheInitCleanupMode: 'self' // 初始化时清理缓存, 可选 'all':清楚除自身外所有缓存数据 或 'self':仅清除除自身版本外，相同命名空间与前置别名的缓存的
-})
-```
-`TypeScript` 强约束模式
-```javascript
-const vmoStore = new VmoStore<{user:string,settings:Record<string,any>|any[]}>({
-  namespace: 'myApp', // 命名空间
-  prefix: 'APP', // 前置别名
-  version: 1, // 版本
-  cryptoKey: 'yourCryptoKeyHere', // 加密KEY,如果为空，则不会启用缓存加密能力
-  dataProps: {
-    user: {
-      type: String, // 数据类型 支持多类型[String,Array,Number]
-      storge: 'localStorage', // 指定 localStorage
-      default: '111', // 默认值
-      expireTime: '1d' // 过期时间 1天,
-      /**
-       * 过期时间可以设置为3种
-       * 1. 数值，以毫秒为加时方式，以写入或者更新是时间为起点值+expireTime
-       * 2. 类型字符 s秒,m分,h时,d天 先转换为毫秒数值，再1写入或者更新是时间为起点值+expireTime
-       * 2. 固定日期格式 "YYYY-MM-DD HH:mm:ss" 定期过期方式
-       */
-    },
-    settings: {
-      type: [Object, Array], // 数据类型
-      default: () => ({}), // 引用型默认值,请都采用函数返回形式
-      storge: 'sessionStorage' // 指定 sessionStorage 缓存器
-    }
-  }, // 存储数据声明
-  capacity: {
-    localStorage: 5000, // localStorage 存储上限
-    sessionStorage: 3000 // sessionStorage 存储上限
-  },
-  cacheInitCleanupMode: 'self' // 初始化时清理缓存, 可选 'all':清楚除自身外所有缓存数据 或 'self':仅清除除自身版本外，相同命名空间与前置别名的缓存的
+  capacity: { localStorage: 5000, sessionStorage: 3000 },
+  cacheInitCleanupMode: 'self'
 })
 
+cache.setData('user', 'Alice')
+console.log(cache.getData('user'))
+cache.$store.user = 'Bob'
+cache.clearData('user')
+cache.clear('sessionStorage')
 ```
 
-#### 设置数据
+`storge` 保留已有 API 的拼写，省略时使用 localStorage。默认 prefix 为 `VMO-STORE`、namespace 为 `NORMAL`、version 为 `0`；版本必须为非负安全整数。
 
-```javascript
-vmoStore.setData('user', 'John Doe')
+## 数据与过期
+
+- 支持 String、Number、Boolean、Array、Object、Date、Map、Set、RegExp，以及这些可序列化值的嵌套组合。读取新实例会恢复复杂类型。
+- Function 接受同步、异步函数，但只保存在当前实例内存中，保留闭包；不会持久化或执行旧缓存中的函数字符串。函数默认值仍以工厂形式配置，例如 `default: () => () => 'default'`。
+- 拒绝循环引用、自定义类实例、嵌套函数、BigInt、Symbol、undefined 和非有限数值。顶层值还必须符合声明的类型。
+- 默认值工厂会在每次缺少缓存值时执行。返回的对象不会自动成为已保存数据。
+- 修改嵌套对象或数组后，需要重新赋值或调用 `setData` 才会持久化；代理只拦截顶层赋值。多个实例或浏览器标签页不自动同步。读取类型包含 `undefined`，使用显式泛型约束键名和赋值类型。
+- 过期时间支持毫秒数（取绝对值）、`1s`/`1m`/`1h`/`1d`，以及 `YYYY-MM-DD` 或 `YYYY-MM-DD HH:mm:ss`。写入会重置相对期限；到达截止时间即过期，`0` 表示立即过期，不设置表示永久。日期形式遵循 JavaScript Date 的时区解析规则。
+
+## 清理与异常
+
+- `clear(type?)`：仅移除当前命名空间在指定存储中的缓存，并清理对应内存；省略时处理两种存储。
+- `clearData(key | keys[])`：删除值，保留声明与默认值。`delete cache.$store.key` 有相同行为。
+- `removeProp(key | keys[])`：删除值与声明。未知键会在任何修改前报错。
+- `clearUnusedCache('self')`：清理同 prefix、namespace 的其他版本；`'all'`：清理同 prefix 下其他命名空间/版本，保留当前命名空间和其他 prefix 的数据。
+- `updateProp(props)`：新增或更新声明。有缓存值时，必须先 `clearData` 才能更换存储后端。配置与 `getProps(key?)` 返回的声明均会复制，避免外部修改污染内部配置。
+- `getCapacity()`：报告当前命名空间序列化内容的 UTF-8 字节数和限额。限额 `0` 生效；未设限额返回 `'none'`。该限额不代表浏览器整个存储空间的实际配额。
+- 写入成功后才更新内存；序列化、容量或底层写入失败会抛错。损坏的缓存字段会被隔离，构造实例不会重写缓存；底层访问失败会抛错。
+- 操作按存储后端提交；涉及两种存储的清理不提供跨后端事务保证。
+
+## 兼容性
+
+新缓存包含类型标记，支持读取旧格式中的普通数据。旧版本无法读取新格式；升级时建议增加 `version`。清理范围与函数持久化行为的变化见上文。
+
+`cryptoKey` 保留为可选的可逆混淆功能，支持 Unicode 密钥并读取旧混淆格式。它不是密码学加密，不提供机密性或完整性保证。实例可通过 `getCryptoKey()`、`getNameSpace()` 查看配置。
+
+可以通过 `storage` 替换同步存储适配器：实现 `setItem`、`getItem`、`removeItem`、`clear`、`getKeys`，失败时应抛出异常。默认导出的 `defaultStorageMethodProxy` 是原始适配器，它的 `clear()` 会清空整个后端，与 `VmoStore.clear()` 的命名空间清理不同。默认适配器需要浏览器存储 API；其他环境需提供适配器。
+
+## 开发与验证
+
+```sh
+npm ci
+npm test
+npm run coverage
+npm run build
+npm run test:package
 ```
 
-#### 获取数据
+`npm run test:watch` 用于交互式测试。
 
-```javascript
-const user = vmoStore.getData('user')
-```
-
-#### 清理数据
-
-```javascript
-// 按属性清空数据
-vmoStore.clearData('user')
-
-// 清理所有缓存数据
-vmoStore.clear('localStorage')
-```
-
-#### 更新属性定义
-
-```javascript
-vmoStore.updateProp({
-  newProp: { type: Number, default: 0, storge: 'localStorage' }
-})
-```
-
-#### 获取缓存属性
-
-```javascript
-const props = vmoStore.getProps()
-```
-
-#### 获取命名空间
-
-```javascript
-const namespace = vmoStore.getNameSpace()
-```
-
-#### 获取存储容量
-
-```javascript
-const capacity = vmoStore.getCapacity()
-```
-
-### 方法详解
-
-- constructor(config: StoreParams): 初始化 `VmoStore` 实例。config 对象用于配置命名空间、版本、加密密钥、数据属性、存储容量和缓存清理模式。
-
-- setData(prop: string, value: any): 设置缓存数据。
-
-- getData(prop: string): 获取缓存数据。
-
-- clear(type?: 'localStorage' | 'sessionStorage'): 清理指定类型的存储，若不指定清理所有存储。
-
-- clearData(prop: string | string[]): 清理指定缓存数据。
-
-- removeProp(prop: string | string[]): 移除缓存声明和数据。
-
-- updateProp(props: DataProps): 更新缓存属性说明。
-
-- getCapacity(): 获取当前的存储容量使用情况和限制。
-
-- getProps(key?: string): 获取缓存属性定义。
-
-- getNameSpace(): 获取命名空间定义。
-
-### 错误处理
-
-`VmoStore` 在一些场景下可能会抛出错误，例如：存储容量超过限制，属性类型不匹配等。请确保在数据量较大时配置足够的允许存储空间。
-
-### 注意事项
-
-- 若使用数据加密，请确保加密密钥的长度符合要求，并注意保密。
-- 当设定了存储容量限制时，数据写入可能会因为超出限制而抛出错误。
-- 在使用 eval 时请确保数据来源的安全性，以免导致安全漏洞。
+覆盖范围是发布库入口 `index.ts` 与全部 `use.lib/**/*.ts` 生产代码，不包含示例、Vue 演示页面、配置和类型声明。语句、分支、函数、行覆盖率要求每个文件均达到 100%，不足会退出失败。HTML 报告位于 `test/reports/unit/coverage/index.html`。CI 执行覆盖率、构建和发布包验证。发布包验证会检查 ESM/CJS 运行时导入和严格 NodeNext 类型声明。

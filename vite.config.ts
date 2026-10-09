@@ -1,13 +1,11 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import { resolve } from 'node:path'
-import { configDefaults } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 import dts from 'vite-plugin-dts'
 
-const srcDir = resolve(__dirname, 'src')
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [vue(), dts({ copyDtsFiles: true })],
+  plugins: [vue(), dts({ copyDtsFiles: true, include: ['index.ts', 'types/**/*.ts', 'use.lib/**/*.ts'] })],
   server: {
     host: '0.0.0.0',
     port: 1980
@@ -15,10 +13,12 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     coverage: {
-      include: ['**/use.lib'],
+      include: ['index.ts', 'use.lib/**/*.ts'],
       provider: 'v8',
       reportsDirectory: './test/reports/unit/coverage',
-      exclude:['use.lib/need-rethink.ts','dist']
+      all: true,
+      reporter: ['text', 'html', 'json', 'json-summary', 'clover'],
+      thresholds: { statements: 100, branches: 100, functions: 100, lines: 100, perFile: true }
     }
   },
   build: {

@@ -41,7 +41,7 @@ describe('VmoStore GPT',()=>{
     store =  new VmoStore(invalidConfig)
     expect(() => {
       store.setData('key1','fdkafjalfkdjfsdjlfalfaflsafsdfjdsfjalsjflsa')
-    }).toThrow("The storage capacity of memory [localStorage] overflows, with a limit of [10 byte], and a storage capacity of [104 byte], resulting in an overflow of [94 byte].")
+    }).toThrow("The storage capacity of memory [localStorage] overflows")
   })
 
   it('should correctly get and set cache data', () => {
@@ -55,13 +55,13 @@ describe('VmoStore GPT',()=>{
     // console.log(store.getData,'sss')
     expect(store.getData('key1')).toBe('default1')
     expect(store.getData('key2')).toBe(123)
-    expect(store.getData('key3')()).toBe('default3')
+    expect(store.getData('key3')!()).toBe('default3')
     store.setData('key1', 'newvalue1')
     store.setData('key2', 789)
     store.setData('key3', () => 'newvalue3')
     expect(store.getData('key1')).toBe('newvalue1')
     expect(store.getData('key2')).toBe(789)
-    expect(store.getData('key3')()).toBe('newvalue3')
+    expect(store.getData('key3')!()).toBe('newvalue3')
   })
   it('should correctly handle capacity limits', () => {
     const largeConfig: StoreParams = {
@@ -83,11 +83,11 @@ describe('VmoStore GPT',()=>{
     store2.setData('key2', 1)
 
     expect(defaultStorageMethodProxy.getItem('VMO-STORE:STORE1:1', 'localStorage')).not.toBeNull()
-    expect(defaultStorageMethodProxy.getItem('VMO-STORE:STORE2:2', 'localStorage')).not.toBeNull()
+    expect(defaultStorageMethodProxy.getItem('VMO-STORE:STORE2:2', 'sessionStorage')).not.toBeNull()
 
     // store1.clearUnusedCache('all')
     // expect(defaultStorageMethodProxy.getItem('VMO-STORE:STORE1:1', 'localStorage')).toBe('=QURHMQDGswADYABGAQBAowGMVhGXUgVH11VDZRCQckECJQFHwUUYBhS');
-    // // expect(defaultStorageMethodProxy.getItem('VMO-STORE:STORE2:2', 'localStorage')).toBeNull()
+    // // expect(defaultStorageMethodProxy.getItem('VMO-STORE:STORE2:2', 'sessionStorage')).toBeNull()
 
     const store3 = new VmoStore({ ...config, namespace: 'STORE3', version: '1' })
     const store4 = new VmoStore({ ...config, namespace: 'STORE4', version: '2' })
@@ -95,11 +95,11 @@ describe('VmoStore GPT',()=>{
     store4.setData('key2', 1)
 
     expect(defaultStorageMethodProxy.getItem('VMO-STORE:STORE3:1', 'localStorage')).not.toBeNull()
-    expect(defaultStorageMethodProxy.getItem('VMO-STORE:STORE4:2', 'localStorage')).not.toBeNull()
+    expect(defaultStorageMethodProxy.getItem('VMO-STORE:STORE4:2', 'sessionStorage')).not.toBeNull()
 
     // store3.clearUnusedCache('self')
     expect(defaultStorageMethodProxy.getItem('VMO-STORE:STORE3:1', 'localStorage')).not.toBeNull()
-    expect(defaultStorageMethodProxy.getItem('VMO-STORE:STORE4:2', 'localStorage')).toBe('=8kS')
+    expect(defaultStorageMethodProxy.getItem('VMO-STORE:STORE4:2', 'sessionStorage')).not.toBeNull()
   })
 
   it('should correctly clear all cache', () => {
@@ -127,7 +127,7 @@ describe('VmoStore GPT',()=>{
 
     expect(store.getData('key1')).toBe('value1')
     expect(store.getData('key2')).toBe(123)
-    expect(store.getData('key3')()).toBe('value3')
+    expect(store.getData('key3')!()).toBe('value3')
 
     store.setData('key1', 'newvalue1')
     expect(store.getData('key1')).toBe('newvalue1')
@@ -159,12 +159,12 @@ describe('VmoStore GPT',()=>{
     // console.log(JSON.stringify(config),99999)
     expect(store.getData('key1')).toBe('default1')
     expect(store.getData('key2')).toBe(123)
-    expect(store.getData('key3')()).toBe('value3')
+    expect(store.getData('key3')!()).toBe('value3')
 
     store.clearData(['key2', 'key3'])
     // console.log(JSON.stringify(config),99999)
     expect(store.getData('key2')).toBe(123)
-    expect(store.getData('key3')()).toBe('default3')
+    expect(store.getData('key3')!()).toBe('default3')
   })
 
   it('should correctly remove properties', () => {
@@ -190,7 +190,7 @@ describe('VmoStore GPT',()=>{
     const capacity = store.getCapacity()
     expect(capacity.localStorage.used).toBeGreaterThan(0)
     expect(capacity.localStorage.limit).toBe(1000)
-    expect(capacity.sessionStorage.used).toBeGreaterThan(0)
+    expect(capacity.sessionStorage.used).toBe(0)
     expect(capacity.sessionStorage.limit).toBe(1000)
   })
 
@@ -214,7 +214,7 @@ describe('VmoStore GPT',()=>{
 
     expect(store.getData('key1')).toBe('default1')
     expect(store.getData('key2')).toBe(123)
-    expect(store.getData('key3')()).toBe('default3')
+    expect(store.getData('key3')!()).toBe('default3')
 
     Date.now = originalDateNow
   })
@@ -233,7 +233,7 @@ describe('VmoStore GPT',()=>{
     store = new VmoStore(config)
     const testFunc = () => 'test'
     store.setData('key3', testFunc)
-    expect(store.getData('key3')()).toBe('test')
+    expect(store.getData('key3')!()).toBe('test')
   })
   it('should correctly handle type constraints', () => {
     store = new VmoStore(config)

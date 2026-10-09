@@ -2,45 +2,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { VmoStore, StoreParams } from '../index'
 import { defaultStorageMethodProxy } from '../index'
 
-// 模拟加密和解密函数
-vi.mock('./crypto-key', () => ({
-  enCrypto: vi.fn((data: string, key: string) => data),
-  deCrypto: vi.fn((data: string, key: string) => data)
-}))
-
-// 模拟存储方法
-vi.mock('./default-storage', () => ({
-  defaultStorageMethodProxy: {
-    getItem: vi.fn((key: string, type: 'localStorage' | 'sessionStorage') => {
-      return type === 'localStorage' ? localStorage.getItem(key) : sessionStorage.getItem(key)
-    }),
-    setItem: vi.fn((key: string, value: string, type: 'localStorage' | 'sessionStorage') => {
-      if (type === 'localStorage') {
-        localStorage.setItem(key, value)
-      } else {
-        sessionStorage.setItem(key, value)
-      }
-    }),
-    getKeys: vi.fn(() => {
-      return ['VMO-STORE:NORMAL:0', 'VMO-STORE:NORMAL:1', 'OTHER-STORE:NORMAL:0']
-    }),
-    removeItem: vi.fn((key: string, type: 'localStorage' | 'sessionStorage') => {
-      if (type === 'localStorage') {
-        localStorage.removeItem(key)
-      } else {
-        sessionStorage.removeItem(key)
-      }
-    }),
-    clear: vi.fn((type: 'localStorage' | 'sessionStorage') => {
-      if (type === 'localStorage') {
-        localStorage.clear()
-      } else {
-        sessionStorage.clear()
-      }
-    })
-  }
-}))
-
 describe('VmoStore', () => {
   let store: VmoStore<Record<string, any>>
   const config:StoreParams = {
@@ -67,6 +28,7 @@ describe('VmoStore', () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.clearAllMocks()
   })
 
@@ -149,7 +111,7 @@ describe('VmoStore', () => {
     store.clearUnusedCache('all')
     expect(localStorage.getItem('VMO-STORE:NORMAL:0')).toBe(null)
     expect(localStorage.getItem('VMO-STORE:NORMAL:1')).toBe(JSON.stringify({ name: 'John Doe', version: 1 }))
-    expect(localStorage.getItem('OTHER-STORE:NORMAL:0')).toBe(null)
+    expect(localStorage.getItem('OTHER-STORE:NORMAL:0')).toBe(JSON.stringify({ name: 'John Doe', version: 0 }))
 
     localStorage.setItem('VMO-STORE:NORMAL:0', JSON.stringify({ name: 'John Doe', version: 0 }))
     localStorage.setItem('VMO-STORE:NORMAL:1', JSON.stringify({ name: 'John Doe', version: 1 }))
@@ -162,26 +124,26 @@ describe('VmoStore', () => {
   })
 
   it('should clear all cache correctly', () => {
-    localStorage.setItem('VMO-STORE:NORMAL:0', JSON.stringify({ name: 'John Doe', version: 0 }))
-    sessionStorage.setItem('VMO-STORE:NORMAL:0', JSON.stringify({ name: 'John Doe', version: 0 }))
+    localStorage.setItem('VMO-STORE:NORMAL:1', JSON.stringify({ name: 'John Doe', version: 0 }))
+    sessionStorage.setItem('VMO-STORE:NORMAL:1', JSON.stringify({ name: 'John Doe', version: 0 }))
 
     store.clear('localStorage')
-    expect(localStorage.getItem('VMO-STORE:NORMAL:0')).toBe(null)
-    expect(sessionStorage.getItem('VMO-STORE:NORMAL:0')).toBe(JSON.stringify({ name: 'John Doe', version: 0 }))
+    expect(localStorage.getItem('VMO-STORE:NORMAL:1')).toBe(null)
+    expect(sessionStorage.getItem('VMO-STORE:NORMAL:1')).toBe(JSON.stringify({ name: 'John Doe', version: 0 }))
 
-    localStorage.setItem('VMO-STORE:NORMAL:0', JSON.stringify({ name: 'John Doe', version: 0 }))
-    sessionStorage.setItem('VMO-STORE:NORMAL:0', JSON.stringify({ name: 'John Doe', version: 0 }))
+    localStorage.setItem('VMO-STORE:NORMAL:1', JSON.stringify({ name: 'John Doe', version: 0 }))
+    sessionStorage.setItem('VMO-STORE:NORMAL:1', JSON.stringify({ name: 'John Doe', version: 0 }))
 
     store.clear('sessionStorage')
-    expect(localStorage.getItem('VMO-STORE:NORMAL:0')).toBe(JSON.stringify({ name: 'John Doe', version: 0 }))
-    expect(sessionStorage.getItem('VMO-STORE:NORMAL:0')).toBe(null)
+    expect(localStorage.getItem('VMO-STORE:NORMAL:1')).toBe(JSON.stringify({ name: 'John Doe', version: 0 }))
+    expect(sessionStorage.getItem('VMO-STORE:NORMAL:1')).toBe(null)
 
-    localStorage.setItem('VMO-STORE:NORMAL:0', JSON.stringify({ name: 'John Doe', version: 0 }))
-    sessionStorage.setItem('VMO-STORE:NORMAL:0', JSON.stringify({ name: 'John Doe', version: 0 }))
+    localStorage.setItem('VMO-STORE:NORMAL:1', JSON.stringify({ name: 'John Doe', version: 0 }))
+    sessionStorage.setItem('VMO-STORE:NORMAL:1', JSON.stringify({ name: 'John Doe', version: 0 }))
 
     store.clear()
-    expect(localStorage.getItem('VMO-STORE:NORMAL:0')).toBe(null)
-    expect(sessionStorage.getItem('VMO-STORE:NORMAL:0')).toBe(null)
+    expect(localStorage.getItem('VMO-STORE:NORMAL:1')).toBe(null)
+    expect(sessionStorage.getItem('VMO-STORE:NORMAL:1')).toBe(null)
   })
 
   it('should clear data correctly', () => {
@@ -268,15 +230,10 @@ describe('VmoStore', () => {
         storage: defaultStorageMethodProxy,
         cacheInitCleanupMode: 'all'
       })
-    }).toThrowError('The expirationTime setting for property [age] is incorrect; Expected a Number type, or a string of the format [number]d, [number]m, [number]y, or YYYY-MM-DD HH:mm:ss.')
+    }).toThrowError('Invalid expiration time; use milliseconds, a duration with s/m/h/d, or YYYY-MM-DD HH:mm:ss.')
   })
   
   it('should throw error with undeclared prop', async () => {
-    try{
-      store.$store.fetchDatas = () => { return 'data' }
-    }catch(err:any){
-      console.log(err.toString(),'11111')
-    }
     expect(()=>{
       store.$store.fetchDatas = () => { return 'data' }
     }).toThrow("VmoStore: Current assignment [fetchDatas] has not been declared.")

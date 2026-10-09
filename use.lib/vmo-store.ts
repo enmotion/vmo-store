@@ -1,424 +1,212 @@
-/*
- * @Author: enmotion
- * @Date: 2024-09-13 02:15:16
- * @Last Modified by: enmotion
- * @Last Modified time: 2024-11-20 20:06:55
- */
-// import { ref, watch } from 'vue'
-import type { DataProps, BasicType, StoreParams, ExpireTime, StorageMethodProxy, CacheData, Capacity } from '@type'
-import { enCrypto, deCrypto } from './crypto-key'
-import { defaultStorageMethodProxy } from './default-storage'
+import type { DataProps, BasicType, StoreParams, ExpireTime, StorageMethodProxy, CacheData, Capacity } from '../types/index.js'
+import { enCrypto, deCrypto } from './crypto-key.js'
+import { defaultStorageMethodProxy } from './default-storage.js'
+import { encodeValue, decodeValue } from './value-codec.js'
 
-const NormlFunc = function () {}.constructor
-const AsyncFunc = async function () {}.constructor
-// console.log(Function == NormlFunc, isAsyncFunction AsyncFunc)
-/**
- * VmoStore:Class
- * 本地缓存管理类
- */
-export class VmoStore<T extends Record<string,any>> {
-  private _cryptoKey: string | undefined // 加密 KEY任意字符
-  private _namespace: `${string}:${string}:${number}` // 命名空间
-  private _props: DataProps // 缓存数据 元信息描述
-  private _data: CacheData<T> // 热数据 v:数组格式保存的数据,t:存储时间, k:是否要经过 eval 转化
-  private _storage: StorageMethodProxy // 存储层方法，可替换存储层，以适应不同的 前端环境
-  private _capacity: Capacity // 容量
-  public $store: T
-  /**
-   * constructor:Function 构造函数
-   * @param config <StoreParams>
-   */
+type StorageType = 'localStorage' | 'sessionStorage'
+const storageTypes: StorageType[] = ['localStorage', 'sessionStorage']
+const hasOwn = (object: object, key: PropertyKey) => Object.prototype.hasOwnProperty.call(object, key)
+
+/** A synchronous, namespace-scoped browser cache. Functions are memory-only. */
+export class VmoStore<T extends Record<string, any> = Record<string, any>> {
+  private _cryptoKey: string | undefined
+  private _namespace: `${string}:${string}:${number}`
+  private _prefix: string
+  private _props: DataProps = {}
+  private _data: CacheData<T> = Object.create(null)
+  private _storage: StorageMethodProxy
+  private _capacity: Capacity
+  public readonly $store: Partial<T>
+
   constructor(config: StoreParams) {
-    try {
-      this._cryptoKey = config.cryptoKey // 加密 KEY【16】位任意字符
-      this._namespace = `${config.prefix ?? 'VMO-STORE'}:${config.namespace ?? 'NORMAL'}:${
-        parseInt(config.version as string) ?? 0
-      }` // 命名空间 前缀名:命名空间:版本号, 版本号作为清理数据的标识
-      this._props = this._shallowClone(config?.dataProps??{}) // 数据属性描述，需要浅拷贝避免污染
-      this._storage = config.storage ?? defaultStorageMethodProxy
-      this._data = this._getCache() // 缓存代理数据
-      this.$store = this._createProxy(this._data) // 创建缓存数据代理
-      this._capacity = config.capacity ?? {}
-      Object.defineProperty(this, 'constantValue', {
-        value: config.capacity ?? {}, // 属性值
-        writable: false, // 不可写
-        configurable: false // 不可配置（不可删除或重新定义）
-      })
-      config.cacheInitCleanupMode && this.clearUnusedCache(config.cacheInitCleanupMode)
-      this._setCache('localStorage')
-      this._setCache('sessionStorage')
-    } catch (err) {
-      throw new Error( (err as Error)?.toString() ?? `VmoStore:Initialization parameter error`)
+    this._cryptoKey = config.cryptoKey
+    this._prefix = config.prefix ?? 'VMO-STORE'
+    const version = Number(config.version ?? 0)
+    if (!Number.isSafeInteger(version) || version < 0) throw new TypeError('Version must be a non-negative safe integer.')
+    this._namespace = `${this._prefix}:${config.namespace ?? 'NORMAL'}:${version}`
+    this._storage = config.storage ?? defaultStorageMethodProxy
+    this._capacity = { ...config.capacity }
+    for (const limit of Object.values(this._capacity)) {
+      if (!Number.isFinite(limit) || limit < 0) throw new TypeError('Capacity must be a non-negative finite number.')
     }
-  }
-  /**
-   * 浅拷贝 prop 属性
-   * @param data 
-   * @returns 
-   */
-  private _shallowClone(prop:DataProps={}):DataProps{
-    const cloneInstance:DataProps={};
-    Object.keys(prop).forEach(key=>{
-      cloneInstance[key]=prop[key];
-    })
-    return cloneInstance
-  }
-  /**
-   * 获取缓存呢数据
-   * 1. 获取所有 localStorage 中的缓存数据
-   * 2. 获取所有 sessionStorage 中的缓存数据
-   * 3. 依照 _props 中的约定，分别在 localStorage 与 sessionStorage 中取出相关数据，组装成最终的缓存数据
-   * 4. 清理缓存数据
-   * @returns {Record<string,any>}
-   */
-  private _getCache() {
-    const T = this
-    try {
-      const cache: { localStorage: Record<string, any>; sessionStorage: Record<string, any> } = {
-        localStorage:
-          JSON.parse(
-            !T._cryptoKey
-              ? T._storage.getItem(T._namespace, 'localStorage') ?? '{}'
-              : deCrypto(T._storage.getItem(T._namespace, 'localStorage') ?? '', T._cryptoKey) ?? '{}'
-          ) ?? {}, // 获取 localStorage 中缓存的全部数据
-        sessionStorage:
-          JSON.parse(
-            !T._cryptoKey
-              ? T._storage.getItem(T._namespace, 'sessionStorage') ?? '{}'
-              : deCrypto(T._storage.getItem(T._namespace, 'sessionStorage') ?? '', T._cryptoKey) ?? '{}'
-          ) ?? {} // 获取 localStorage 中缓存的全部数据
-      }
-      const result: Record<string, { v: any[]; t: number; k?: boolean }> = {}
-      Object.keys(T._props).forEach(key => {
-        result[key] = cache[T._props[key].storge ?? 'localStorage'][key]
-      })
-      return result as Partial<CacheData<T>>
-    } catch (err) {
-      // console.warn(err)
-      return {}
-    }
-  }
-  private _setCache(type: 'sessionStorage' | 'localStorage') {
-    const T = this
-    const keys = Object.keys(T._props).filter(
-      key => T._props[key].storge == type && Date.now() < T._getExpiredTime(key, T._props[key]?.expireTime)
-    )
-    const store = T._pick(keys, T._data)
-    const dataString = !T._cryptoKey ? JSON.stringify(store) : enCrypto(JSON.stringify(store), T._cryptoKey)
-    if (!T._capacity?.[type] || (T._capacity[type] as number) >= new Blob([dataString]).size) {
-      T._storage.setItem(T._namespace, dataString, type) // 将数据缓存入持久化
-    } else {
-      throw new Error(
-        `The storage capacity of memory [${type}] overflows, with a limit of [${
-          T._capacity?.[type]
-        } byte], and a storage capacity of [${new Blob([dataString]).size} byte], resulting in an overflow of [${
-          new Blob([dataString]).size - (T._capacity[type] as number)
-        } byte].`
-      )
-    }
-  }
-  /**
-   * _createProxy:Function 创建代理
-   * @param target // 代理目标
-   * @returns
-   */
-  private _createProxy(target: Record<string, any>):T {
-    const T = this // 固定指针
-    const proxyHandler: ProxyHandler<Record<string, any>> = {
-      /**
-       * 获取代理对象的属性值
-       * 处理步骤：
-       * 1. 判断该属性是否为 _props 内声明的合法属性
-       * 2. 判断该属性 是否过期
-       * 3. 判断类型是否符合 _props 声明预期 如果声明为 Function 类型，则同步异步方法都支持
-       * 附加操作：
-       * 1. 如果过期，则需要进行持久化缓存的对应清理
-       * @param target 代理的对象
-       * @param prop 获取的值
-       * @param receiver
-       * @returns
-       */
-      get: function (target, prop: string, receiver) {
-        try {
-          /* 键名对应的 缓存数据 元信息描述 是否存在  */
-          if (Object.keys(T._props).includes(prop)) {
-            // 存在:尝试取值
-            const data = Reflect.get(target, prop, receiver)
-            let value: any // 声明值但暂不赋值
-            // 获取属性的类型
-            const types = T._getTypes(T._props[prop].type)
-            // 获取属性值，必须满足 0:未设置过期时间||未过期 返回 缓存值 或 默认值
-            if (!T._props[prop]?.expireTime || Date.now() < T._getExpiredTime(prop, T._props[prop].expireTime)) {
-              value = data?.k ? eval('(' + data?.v + ')') : data?.v // 如过值未过期，则返回真正的值，函数形式的值会由字符串转为函数
-            } else {
-              // 发现默认值情况，不论是否存在该数据，都应该清理本地缓存 可以进一步优化
-              if (!!data) {
-                delete target[prop] // 删除 target 中的数值
-                T._setCache(T._props[prop].storge ?? 'localStorage')
-              }
-            }
-            // 返回值，必须 0:类型匹配 否则返回 undefined
-            return types.includes(value?.constructor) ||
-              (types.includes(Function) && [NormlFunc, AsyncFunc].includes(value?.constructor))
-              ? value
-              : T._getDefaultValue(T._props[prop]?.default)
-          } else {
-            // 不存在:直接返回 undefined
-            throw new Error(`VmoStore: The property [${prop}] being accessed does not exist.`)
-          }
-        } catch (err) {
-          console.warn(err)
-          return undefined
+    this.updateProp(config.dataProps)
+    this._load()
+    this.$store = new Proxy(this._data, {
+      get: (_target, prop) => this._get(prop),
+      set: (_target, prop, value) => {
+        if (typeof prop !== 'string' || !hasOwn(this._props, prop)) {
+          throw new Error(`VmoStore: Current assignment [${String(prop)}] has not been declared.`)
         }
+        if (!this._matches(value, this._props[prop].type)) {
+          throw new TypeError(`VmoStore: Property [${prop}] expects a type of [${this._types(this._props[prop].type).map(type => type.name)}], but the actual obtained type is ${value?.constructor?.name}.`)
+        }
+        const entry = { v: value, t: Date.now() }
+        const candidate = Object.assign(Object.create(null), this._data, { [prop]: entry })
+        this._persist(this._storageType(prop), candidate)
+        Object.defineProperty(this._data, prop, { value: entry, configurable: true, enumerable: true, writable: true })
+        return true
       },
-      /**
-       * 写入代理对象的属性值
-       * 处理步骤：
-       * 1. 判断该属性是否为 _props 内声明的合法属性
-       * 2. 判断写入类型，是否为声明内约束的合法类型, 如果声明为 Function 类型，则同步异步方法都支持
-       * 3. 更新热数据
-       * 4. 更新持久化数据
-       * @param target
-       * @param prop
-       * @param value
-       * @param receiver
-       * @returns
-       */
-      set: function (target, prop: string, value, receiver) {
+      deleteProperty: (_target, prop) => {
+        if (typeof prop === 'string' && hasOwn(this._props, prop)) this.clearData(prop)
+        return true
+      },
+      defineProperty: () => { throw new TypeError('Use setData or assignment to update the store.') }
+    }) as Partial<T>
+    if (config.cacheInitCleanupMode) this.clearUnusedCache(config.cacheInitCleanupMode)
+  }
+
+  private _types(type: BasicType | BasicType[]): BasicType[] {
+    return Array.isArray(type) ? type : [type]
+  }
+
+  private _matches(value: any, type: BasicType | BasicType[]) {
+    return this._types(type).some(expected => expected === Function ? typeof value === 'function' : value?.constructor === expected)
+  }
+
+  private _storageType(prop: string): StorageType {
+    return this._props[prop].storge ?? 'localStorage'
+  }
+
+  private _expiry(time: ExpireTime | undefined, writtenAt: number): number {
+    if (time === undefined) return Infinity
+    if (typeof time === 'number' && Number.isFinite(time)) return writtenAt + Math.abs(time)
+    if (typeof time === 'string') {
+      const duration = /^(\d+(?:\.\d+)?)(s|m|h|d)$/.exec(time)
+      if (duration) {
+        const units: Record<string, number> = { s: 1000, m: 60000, h: 3600000, d: 86400000 }
+        return writtenAt + Number(duration[1]) * units[duration[2]]
+      }
+      if (/^\d{4}-\d{2}-\d{2}(?: \d{2}:\d{2}:\d{2})?$/.test(time)) {
+        const timestamp = new Date(time.replace(' ', 'T')).getTime()
+        if (Number.isFinite(timestamp)) return timestamp
+      }
+    }
+    throw new TypeError('Invalid expiration time; use milliseconds, a duration with s/m/h/d, or YYYY-MM-DD HH:mm:ss.')
+  }
+
+  private _load() {
+    for (const type of storageTypes) {
+      // Backend access errors must remain visible; malformed payloads are isolated.
+      const raw = this._storage.getItem(this._namespace, type)
+      if (raw === null) continue
+      let cache: Record<string, any>
+      try {
+        cache = JSON.parse(this._cryptoKey ? deCrypto(raw, this._cryptoKey) : raw)
+        if (cache === null || typeof cache !== 'object' || Array.isArray(cache)) continue
+      } catch {
+        continue
+      }
+      for (const prop of Object.keys(this._props)) {
+        if (this._storageType(prop) !== type || !hasOwn(cache, prop)) continue
+        const entry = cache[prop]
         try {
-          /* 键名对应的 缓存数据 元信息描述 是否存在  */
-          if (Object.keys(T._props).includes(prop)) {
-            const types = T._getTypes(T._props[prop].type)
-            if (
-              types.includes(value?.constructor) ||
-              (types.includes(Function) && [NormlFunc, AsyncFunc].includes(value?.constructor))
-            ) {
-              const data = {
-                v: [NormlFunc, AsyncFunc].includes(value.constructor) ? value.toString() : value,
-                t: Date.now(),
-                k: [NormlFunc, AsyncFunc].includes(value.constructor) ? true : undefined
-              } // 更新数据
-              Reflect.set(target, prop, data, receiver) // 将数据更新到热数据
-              T._setCache(T._props[prop].storge ?? 'localStorage')
-              return true
-            } else {
-              throw new Error(
-                `VmoStore: Property [${prop}] expects a type of [${types.map(
-                  constructor => (constructor as any)?.name
-                )}], but the actual obtained type is ${value?.constructor?.name}.`
-              )
-            }
-          } else {
-            throw new Error(`VmoStore: Current assignment [${prop}] has not been declared.`)
-          }
-        } catch (err) {
-          throw err as Error
+          if (!entry || !Number.isFinite(entry.t) || entry.k || (entry.format !== undefined && entry.format !== 1)) continue
+          const value = entry.format === 1 ? decodeValue(entry.v) : entry.v
+          if (!this._matches(value, this._props[prop].type) || Date.now() >= this._expiry(this._props[prop].expireTime, entry.t)) continue
+          Object.defineProperty(this._data, prop, { value: { v: value, t: entry.t }, configurable: true, enumerable: true, writable: true })
+        } catch {
+          // A malformed field must not discard other valid fields.
+          continue
         }
       }
     }
-    const proxy = new Proxy(target, proxyHandler)
-    return proxy as T
   }
-  /**
-   * pick 方法
-   * @param keys 挑选出来的可key
-   * @param data 目标对象
-   * @returns {Reocrd<string,any>}
-   */
-  private _pick(keys: string[], data: Record<string, any>) {
-    const result: Record<string, any> = {}
-    keys.forEach(k => {
-      result[k] = data[k]
-    })
-    return result
-  }
-  /**
-   * 获取最大过期时间
-   * 1. 如果过期时间设置的为一个数值，则 存储时间+配置的绝对值数值 返回 单位毫秒
-   * 2. 如果过期时间设置 满足 YYYY-MM-DD 或 YYYY-MM-DD HH:mm:ss 那么则可以理解为当前过期时间配置的为具体定期时间，则直接转换为绝对过期时间数值返回
-   * 2. 如果过期时间配置的为 s,m,h,d 这种形式，则直接转换为 存储时间+转换后的绝对时间返回 单位 s:秒,m:分, h:时, d:天
-   * @param prop 用于输出的属性名
-   * @param time 过期时间
-   * @returns {number}
-   */
-  private _getExpiredTime(prop: string, time: ExpireTime = Date.now() + 1000): number {
-    const T = this
-    if (time.constructor == Number) {
-      return (T._data[prop]?.t ?? 0) + Math.abs(time)
+
+  private _persist(type: StorageType, data: CacheData<T>) {
+    const cache: Record<string, any> = Object.create(null)
+    for (const prop of Object.keys(this._props)) {
+      const entry = data[prop]
+      if (this._storageType(prop) !== type || !entry || typeof entry.v === 'function' || Date.now() >= this._expiry(this._props[prop].expireTime, entry.t)) continue
+      cache[prop] = { v: encodeValue(entry.v), t: entry.t, format: 1 }
     }
-    const regex = /^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2}){0,1}$/g
-    if (regex.test(time as string)) {
-      return new Date(time).getTime()
+    const json = JSON.stringify(cache)
+    const payload = this._cryptoKey ? enCrypto(json, this._cryptoKey) : json
+    const size = new Blob([payload]).size
+    const limit = this._capacity[type]
+    if (limit !== undefined && size > limit) {
+      throw new Error(`The storage capacity of memory [${type}] overflows, with a limit of [${limit} byte], and a storage capacity of [${size} byte], resulting in an overflow of [${size - limit} byte].`)
     }
-    const regex2 = /^\d+(\.\d+){0,1}(s|m|h|d)$/g
-    if (regex2.test(time as string)) {
-      const unit = {
-        s: 1000,
-        m: 1000 * 60,
-        h: 1000 * 60 * 60,
-        d: 1000 * 60 * 60 * 24
-      }[['s', 'm', 'h', 'd'].filter(item => (time as string).includes(item))[0]]
-      return (T._data[prop]?.t ?? 0) + parseFloat(time as string) * (unit ?? 0)
+    this._storage.setItem(this._namespace, payload, type)
+  }
+
+  private _get(prop: PropertyKey): any {
+    if (typeof prop !== 'string' || !hasOwn(this._props, prop)) return undefined
+    const definition = this._props[prop]
+    const entry = this._data[prop]
+    if (entry) {
+      if (Date.now() < this._expiry(definition.expireTime, entry.t) && this._matches(entry.v, definition.type)) return entry.v
+      this.clearData(prop)
     }
-    throw new Error(
-      `The expirationTime setting for property [${prop}] is incorrect; Expected a Number type, or a string of the format [number]d, [number]m, [number]y, or YYYY-MM-DD HH:mm:ss.`
-    )
+    return typeof definition.default === 'function' ? definition.default() : definition.default
   }
-  /**
-   * 获取默认值
-   * 1. 默认值配置如果是函数，则返回函数执行结果
-   * 2. 默认值如果是值类型，则直接返回值
-   * @param value
-   * @returns
-   */
-  private _getDefaultValue(
-    value?:
-      | string
-      | number
-      | boolean
-      | {
-          (): any
-        }
-  ) {
-    return value?.constructor == Function ? (value as () => any)() : value
-  }
-  /**
-   * 获取缓存对象的声明类型数组，方便判断
-   * @param type
-   * @returns
-   */
-  private _getTypes(type: BasicType | BasicType[]) {
-    return type.constructor == Array ? type : [type]
-  }
-  /**
-   * 
-   * @param object 
-   * @returns 
-   */
-  // private _getTargetType(object:any){
-  //   const targetTypeOf = typeof object
-  //   return Array.isArray(object) ? 'array' : targetTypeOf;
-  // }
-  /**
-   * 缓存回收 除自身 命名空间 外
-   * @param type // all: 所有缓存, self:仅仅 相同命名空间，但是版本不同的回收
-   */
+
+  /** all: other namespaces under this prefix; self: other versions of this namespace. */
   public clearUnusedCache(type: 'all' | 'self') {
-    const T = this
-    const itemKeys = T._storage.getKeys()
-    switch (type) {
-      case 'all':
-        itemKeys
-          .filter(key => key != T._namespace)
-          .forEach(key => {
-            T._storage.removeItem(key, 'localStorage')
-            T._storage.removeItem(key, 'sessionStorage')
-          })
-        break
-      case 'self':
-        const prefixText = T._namespace.split(':').slice(0, -1).join(':') + ':'
-        const RegEx = new RegExp(`^${prefixText}\\d+$`)
-        itemKeys
-          .filter(key => {
-            return RegEx.test(key) && T._namespace !== key
-          })
-          .map(key => {
-            T._storage.removeItem(key, 'localStorage')
-            T._storage.removeItem(key, 'sessionStorage')
-          })
+    const prefix = type === 'all' ? `${this._prefix}:` : this._namespace.slice(0, this._namespace.lastIndexOf(':') + 1)
+    for (const key of this._storage.getKeys()) {
+      if (key === this._namespace || !key.startsWith(prefix) || !/^\d+$/.test(key.slice(key.lastIndexOf(':') + 1))) continue
+      for (const storageType of storageTypes) this._storage.removeItem(key, storageType)
     }
   }
-  /**
-   * 清理所有的缓存
-   * @param type
-   */
-  public clear(type?: 'localStorage' | 'sessionStorage') {
-    if (!!type) {
-      this._storage.clear(type)
-    } else {
-      this._storage.clear('localStorage')
-      this._storage.clear('sessionStorage')
+
+  /** Clear only this instance's namespace, including its in-memory values. */
+  public clear(type?: StorageType) {
+    for (const storageType of type ? [type] : storageTypes) {
+      this._storage.removeItem(this._namespace, storageType)
+      for (const prop of Object.keys(this._data)) {
+        if (this._storageType(prop) === storageType) delete this._data[prop]
+      }
     }
   }
-  /**
-   * 获取缓存对象
-   * @param prop
-   * @returns
-   */
-  public getData<K extends keyof T>(prop: K):T[K] {
-    return this.$store[prop]
-  }
-  public setData<K extends keyof T>(prop: K, value: T[K]) {
-    return (this.$store[prop] = value)
-  }
+
+  public getData<K extends keyof T>(prop: K): T[K] | undefined { return this.$store[prop] }
+  public setData<K extends keyof T>(prop: K, value: T[K]) { return (this.$store[prop] = value) }
 
   public updateProp(props: DataProps) {
-    Object.keys(props).forEach(key=>{
-      this._props[key] = props[key]
-    })
-  }
-  /**
-   * 清除数据
-   * 仅仅清除对应的缓存值，不会更改其声明内容
-   * @param prop
-   */
-  public clearData(prop: string | string[]) {
-    if (prop.constructor == String) {
-      const type = this._props[prop].storge ?? 'localStorage'
-      delete this._data[prop]
-      this._setCache(type)
-    } else {
-      ;(prop as string[]).forEach(key => {
-        const type = this._props[key].storge ?? 'localStorage'
-        delete this._data[key]
-        this._setCache(type)
-      })
+    const next = { ...this._props }
+    for (const [prop, definition] of Object.entries(props)) {
+      this._expiry(definition.expireTime, 0)
+      if (hasOwn(this._data, prop) && (definition.storge ?? 'localStorage') !== this._storageType(prop)) {
+        throw new Error('Clear the cached value before changing its storage backend.')
+      }
+      Object.defineProperty(next, prop, { value: { ...definition, type: Array.isArray(definition.type) ? [...definition.type] : definition.type }, enumerable: true, configurable: true, writable: true })
     }
+    this._props = next
   }
-  /**
-   * 清除属性
-   * 会清除相关的属性声明与缓存值
-   * @param prop
-   */
-  public removeProp(prop: string | string[]) {
-    if (prop.constructor == String) {
-      const type = this._props[prop].storge ?? 'localStorage'
-      delete this._data[prop]
-      delete this._props[prop]
-      this._setCache(type)
-    } else {
-      ;(prop as string[]).forEach(key => {
-        const type = this._props[key].storge ?? 'localStorage'
-        delete this._data[key]
-        delete this._props[key]
-        this._setCache(type)
-      })
+
+  public clearData(prop: string | string[]) { this._remove(prop, false) }
+  public removeProp(prop: string | string[]) { this._remove(prop, true) }
+
+  private _remove(prop: string | string[], removeDefinition: boolean) {
+    const keys = typeof prop === 'string' ? [prop] : prop
+    // Validate the whole request before making changes.
+    for (const key of keys) {
+      if (!hasOwn(this._props, key)) throw new Error(`Unknown cache property [${key}].`)
     }
-  }
-  /**
-   * huoqu
-   * @returns
-   */
-  public getCapacity() {
-    const T = this
-    return {
-      localStorage: {
-        used: new Blob([T._storage.getItem(T._namespace, 'localStorage') as string]).size,
-        limit: T._capacity?.localStorage ?? 'none'
-      },
-      sessionStorage: {
-        used: new Blob([T._storage.getItem(T._namespace, 'sessionStorage') as string]).size,
-        limit: T._capacity?.sessionStorage ?? 'none'
+    const groups = storageTypes.map(type => ({ type, selected: keys.filter(key => this._storageType(key) === type) }))
+    for (const { type, selected } of groups) {
+      if (selected.length === 0) continue
+      const candidate = Object.assign(Object.create(null), this._data)
+      for (const key of selected) delete candidate[key]
+      this._persist(type, candidate)
+      for (const key of selected) {
+        delete this._data[key]
+        if (removeDefinition) delete this._props[key]
       }
     }
   }
+
+  public getCapacity() {
+    const usage = (type: StorageType) => ({
+      used: new Blob([this._storage.getItem(this._namespace, type) ?? '']).size,
+      limit: this._capacity[type] ?? 'none'
+    })
+    return { localStorage: usage('localStorage'), sessionStorage: usage('sessionStorage') }
+  }
   public getProps(key?: string) {
-    return key ? this._props[key] : this._props
+    const copy = Object.fromEntries(Object.entries(this._props).map(([prop, definition]) => [prop, { ...definition, type: Array.isArray(definition.type) ? [...definition.type] : definition.type }]))
+    return key === undefined ? copy : copy[key]
   }
-  public getCryptoKey() {
-    return this._cryptoKey
-  }
-  public getNameSpace() {
-    return this._namespace
-  }
+  public getCryptoKey() { return this._cryptoKey }
+  public getNameSpace() { return this._namespace }
 }

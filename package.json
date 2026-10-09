@@ -9,9 +9,14 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/vmo-store.js",
-      "require": "./dist/vmo-store.umd.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/vmo-store.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/vmo-store.umd.cjs"
+      }
     },
     "./*": "./*"
   },
@@ -20,13 +25,12 @@
   ],
   "scripts": {
     "coverage": "vitest run --coverage",
-    "test": "vitest",
+    "test": "vitest run",
     "dev": "vite",
-    "build": "vue-tsc && vite build",
-    "preview": "vite preview"
-  },
-  "peerDependencies": {
-    "vue": "^3.3.4"
+    "build": "vue-tsc && vite build && node scripts/build-cjs-types.mjs",
+    "preview": "vite preview",
+    "test:watch": "vitest",
+    "test:package": "node scripts/verify-package.mjs"
   },
   "devDependencies": {
     "@types/chai": "^5.0.1",
