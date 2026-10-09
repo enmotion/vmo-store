@@ -1,22 +1,59 @@
-name: CI
+name: Verify and deploy documentation
+
 on:
   push:
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
         with:
-          node-version: 20
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
           cache: npm
       - run: npm ci
       - run: npm run coverage
       - run: npm run build
       - run: npm run test:package
+      - run: npm run docs:build
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npm run test:e2e
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage
-          path: test/reports/unit/coverage
+          name: verification-reports
+          path: |
+            test/reports/unit/coverage
+            test/reports/browser
+          retention-days: 14
+      - uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+        with:
+          path: docs/.vitepress/dist
+
+  deploy:
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+      - uses: actions/deploy-pages@v4
+        id: deployment

@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>VmoStore browser fixture</title><link rel="icon" href="data:,"></head>
+<body><h1>Built bundle browser tests</h1><p id="ready">Loading</p>
+<script type="module">
+import { VmoStore, defaultStorageMethodProxy } from '/dist/vmo-store.js'
+window.VmoStore = VmoStore
+window.defaultStorageMethodProxy = defaultStorageMethodProxy
+document.querySelector('#ready').textContent = 'Ready'
+</script></body></html>

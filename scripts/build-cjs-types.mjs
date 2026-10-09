@@ -1,4 +1,4 @@
-import { readdir, readFile, writeFile } from 'node:fs/promises'
+import { readdir, readFile, writeFile, copyFile, mkdir } from 'node:fs/promises'
 
 // CommonJS consumers need declarations classified as CommonJS, including imports.
 async function copyDeclarations(directory) {
@@ -12,4 +12,6 @@ async function copyDeclarations(directory) {
   }
 }
 
+await mkdir(new URL('../dist/types/', import.meta.url), { recursive: true })
+await copyFile(new URL('../types/index.d.ts', import.meta.url), new URL('../dist/types/index.d.ts', import.meta.url))
 await copyDeclarations(new URL('../dist/', import.meta.url))

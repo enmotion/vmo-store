@@ -68,8 +68,16 @@ npm test
 npm run coverage
 npm run build
 npm run test:package
+npm run docs:build
+npm run test:e2e
 ```
 
 Use `npm run test:watch` for interactive testing.
 
 Coverage includes the published entry `index.ts` and all production modules in `use.lib/**/*.ts`. Examples, the Vue demo, configuration and type declarations are outside that scope. Each production file must reach 100% statement, branch, function and line coverage; falling below any threshold fails the command. The HTML report is at `test/reports/unit/coverage/index.html`. CI checks coverage, builds the package, and verifies ESM/CJS runtime imports and strict NodeNext declarations.
+
+## Online docs and browser tests
+
+[Documentation](https://enmotion.github.io/vmo-store/) · [中文](https://enmotion.github.io/vmo-store/zh/)
+
+Install browsers with `npx playwright install chromium firefox webkit`, then run `npm run verify`. The real Chromium, Firefox and WebKit matrix also includes two emulated mobile viewports; those are not physical-device tests. `npm run docs:dev` starts VitePress. Verified `master` pushes automatically deploy to GitHub Pages.

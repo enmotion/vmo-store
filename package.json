@@ -27,31 +27,39 @@
     "coverage": "vitest run --coverage",
     "test": "vitest run",
     "dev": "vite",
-    "build": "vue-tsc && vite build && node scripts/build-cjs-types.mjs",
+    "build": "vue-tsc --noEmit && vite build && tsc -p tsconfig.lib.json && node scripts/build-cjs-types.mjs",
     "preview": "vite preview",
     "test:watch": "vitest",
-    "test:package": "node scripts/verify-package.mjs"
+    "test:package": "node scripts/verify-package.mjs",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report test/reports/browser/html",
+    "verify": "npm run coverage && npm run build && npm run test:package && npm run docs:build && npm run test:e2e"
   },
   "devDependencies": {
-    "@types/chai": "^5.0.1",
-    "@types/chai-as-promised": "^8.0.1",
-    "@types/mocha": "^10.0.9",
-    "@types/node": "^20.17.6",
-    "@vitejs/plugin-vue": "^4.6.2",
-    "@vitest/coverage-v8": "^2.1.4",
-    "@vitest/ui": "^2.1.4",
-    "@vue/test-utils": "^2.4.6",
-    "autoprefixer": "^10.4.16",
-    "chai": "^5.1.2",
-    "chai-as-promised": "^8.0.0",
-    "happy-dom": "^15.10.1",
-    "jsdom": "^25.0.1",
+    "@playwright/test": "^1.64.0",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^24.0.0",
+    "@vitejs/plugin-vue": "^6.0.9",
+    "@vitest/coverage-v8": "4.1.11",
+    "jsdom": "^26.1.0",
     "postcss": "^8.4.32",
-    "tailwindcss": "^3.3.6",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.2.2",
-    "vite": "^5.0.0",
-    "vite-plugin-dts": "^3.6.4",
-    "vitest": "^2.1.4",
-    "vue-tsc": "^1.8.22"
+    "vite": "^7.3.7",
+    "vitepress": "^1.6.4",
+    "vitest": "4.1.11",
+    "vue": "^3.5.43",
+    "vue-tsc": "^3.3.12"
+  },
+  "overrides": {
+    "vite": "$vite",
+    "@vitejs/plugin-vue": "$@vitejs/plugin-vue"
+  },
+  "engines": {
+    "node": "^20.19.0 || ^22.12.0 || >=24.0.0"
   }
 }

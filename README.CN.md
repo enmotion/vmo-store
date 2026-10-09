@@ -68,8 +68,16 @@ npm test
 npm run coverage
 npm run build
 npm run test:package
+npm run docs:build
+npm run test:e2e
 ```
 
 `npm run test:watch` 用于交互式测试。
 
 覆盖范围是发布库入口 `index.ts` 与全部 `use.lib/**/*.ts` 生产代码，不包含示例、Vue 演示页面、配置和类型声明。语句、分支、函数、行覆盖率要求每个文件均达到 100%，不足会退出失败。HTML 报告位于 `test/reports/unit/coverage/index.html`。CI 执行覆盖率、构建和发布包验证。发布包验证会检查 ESM/CJS 运行时导入和严格 NodeNext 类型声明。
+
+## 在线文档与浏览器实测
+
+[中文文档](https://enmotion.github.io/vmo-store/zh/) · [English](https://enmotion.github.io/vmo-store/)
+
+安装浏览器后运行 `npm run verify`：`npx playwright install chromium firefox webkit`。真实 Chromium、Firefox、WebKit 与两种移动视口测试使用构建产物；移动项目属于设备模拟，不是实体手机实测。`npm run docs:dev` 启动 VitePress 文档。`master` 推送通过验证后自动部署 GitHub Pages。

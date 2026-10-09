@@ -116,7 +116,7 @@ try {
 </script>
 
 <template>
-  <div class="flex flex-col flex-grow items-center justify-center">
+  <div class="flex flex-col grow items-center justify-center">
     <!-- <vmo-button perfix="ssee">aaaa</vmo-button> -->
   </div>
 </template>
@@ -126,6 +126,6 @@ html,
 body {
   height: 100%;
   display: flex;
-  flex-grow: 1;
+  grow: 1;
 }
 </style>
